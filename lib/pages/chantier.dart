@@ -1,7 +1,11 @@
+import 'package:chantier/repository/chantier_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_indicator/loading_indicator.dart';
 
 import '../model/chantier.dart';
+import '../ui/common/loading.dart';
+import '../utils/utils.dart';
 import 'add_chantier.dart';
 
 class ChantiersPage extends StatefulWidget {
@@ -12,38 +16,65 @@ class ChantiersPage extends StatefulWidget {
 }
 
 class _ChantiersPageState extends State<ChantiersPage> {
-  List<Chantier> chantiers = [
-    Chantier(
-      name: "Résidence Le Parc",
-      client: "Société Immobilière Paris",
-      dateLivraison: "15/11/2026",
-      budget: "450 000 €",
-      status: "En cours",
-    ),
-    Chantier(
-      name: "Centre Commercial Lyon",
-      client: "Lyon Développement SA",
-      dateLivraison: "12/07/2024",
-      budget: "850 000 €",
-      status: "Retard",
-    ),
-    Chantier(
-      name: "Bureau La Défense",
-      client: "AXA Immobilier",
-      dateLivraison: "16/11/1996",
-      budget: "1 200 000 €",
-      status: "Livré",
-    ),
-    Chantier(
-      name: "École Primaire",
-      client: "Mairie de Lille",
-      dateLivraison: "18/12/2026",
-      budget: "200 000 €",
-      status: "En attente",
-    ),
-  ];
+  List<Chantier> chantiers = [];
   final ScrollController scrollController = ScrollController();
 
+  bool isLoading = true ;
+
+  @override
+  initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        chantiers = await ChantierRepository().getChantiers() ?? [];
+        setState(() {
+          isLoading = false;
+        });
+      }catch(e){
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list chantier $e");
+      }
+    }
+    );
+
+  }
+
+  Future<void> _loadChantiers() async {
+    setState(() {
+      isLoading = true;
+
+    });
+
+    try {
+      chantiers = await ChantierRepository().getChantiers() ?? [];
+      setState(() {
+        isLoading = false;
+      });
+    }catch(e){
+      setState(() {
+        isLoading = false;
+      });
+      print("exception list chantier $e");
+    }
+  }
+
+  void _navigateToAddChantier(BuildContext context) async {
+
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const NewProjectDragDropScreen(),
+      ),
+    );
+
+    if (result == true) {
+      await _loadChantiers();
+
+
+    }
+  }
   @override
   void dispose() {
     scrollController.dispose();
@@ -56,27 +87,27 @@ class _ChantiersPageState extends State<ChantiersPage> {
   }
 
   void _editChantier(Chantier chantier) {
-    print("Modification de : ${chantier.name}");
+    print("Modification de : ${chantier.nom}");
   }
 
   void _deleteChantier(Chantier chantier) {
     setState(() {
       chantiers.remove(chantier);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chantier "${chantier.name}" supprimé.')),
+        SnackBar(content: Text('Chantier "${chantier.nom}" supprimé.')),
       );
     });
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'En cours':
+      case 'en cours':
         return Colors.blue.shade700;
-      case 'Livré':
+      case 'terminé':
         return Colors.green.shade700;
-      case 'Retard':
+      case 'retard':
         return Colors.red.shade700;
-      case 'En attente':
+      case 'en attente':
         return Colors.orange.shade700;
       default:
         return Colors.grey;
@@ -107,20 +138,22 @@ class _ChantiersPageState extends State<ChantiersPage> {
                   color: Colors.blue.shade700,
                   size: 40,
                 ),
-                onPressed: _openAddProjectModal,
+                onPressed:(){
+                  _navigateToAddChantier(context);
+                },
               ),
             ],
           ),
           const SizedBox(height: 20),
 
-          SizedBox(
+          isLoading ? Loader() : chantiers.isNotEmpty ? SizedBox(
             width: MediaQuery.of(context).size.width * 0.9,
             child: Scrollbar(
                 controller: scrollController,
                 thumbVisibility: true,
                  child :
                 SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
+                    scrollDirection: isMobile ? Axis.horizontal :Axis.vertical ,
                     controller: scrollController,
                     child: SingleChildScrollView(
                       child: isMobile
@@ -193,14 +226,14 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                     cells: [
                                       DataCell(
                                         Text(
-                                          chantier.name,
+                                          chantier.nom ?? "",
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ),
-                                      DataCell(Text(chantier.client)),
-                                      DataCell(Text(chantier.budget)),
+                                      DataCell(Text(chantier.owner ??  "")),
+                                      DataCell(Text(Utils.formatNumber(chantier.total ?? 0))),
                                       DataCell(
                                         Container(
                                           padding: const EdgeInsets.symmetric(
@@ -209,17 +242,17 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: _getStatusColor(
-                                              chantier.status,
+                                              chantier.status ?? "",
                                             ).withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(
                                               4,
                                             ),
                                           ),
                                           child: Text(
-                                            chantier.status,
+                                            chantier.status ?? "",
                                             style: TextStyle(
                                               color: _getStatusColor(
-                                                chantier.status,
+                                                chantier.status ?? "",
                                               ),
                                               fontSize: 12,
                                             ),
@@ -230,7 +263,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                         Row(
                                           children: [
                                             Text(
-                                              "${(chantier.dateLivraison).toString()}",
+                                              "${(chantier.dateEmission).toString()}",
                                             ),
                                             const SizedBox(width: 5),
                                           ],
@@ -269,7 +302,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                             ),
                     ),
                   ),
-          ),)
+          ),) : Center(child: Text("Liste est vide"))
         ],
       ),
     );
@@ -330,7 +363,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
             cells: [
               DataCell(
                 Text(
-                  chantier.name,
+                  chantier.nom ?? "",
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 12,
@@ -339,7 +372,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
               ),
               DataCell(
                 Text(
-                  chantier.client,
+                  chantier.owner ?? "",
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 12,
@@ -348,7 +381,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
               ),
               DataCell(
                 Text(
-                  chantier.budget,
+                  Utils.formatNumber(chantier.total ?? 0),
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 12,
@@ -362,13 +395,13 @@ class _ChantiersPageState extends State<ChantiersPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(chantier.status).withOpacity(0.1),
+                    color: _getStatusColor(chantier.status ?? "").withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    chantier.status,
+                    chantier.status ?? "",
                     style: TextStyle(
-                      color: _getStatusColor(chantier.status),
+                      color: _getStatusColor(chantier.status ?? ""),
                       fontSize: 12,
                     ),
                   ),
@@ -378,7 +411,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                 Row(
                   children: [
                     Text(
-                      "${(chantier.dateLivraison).toString()}",
+                      "${(chantier.dateEmission).toString()}",
                       style: const TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 12,

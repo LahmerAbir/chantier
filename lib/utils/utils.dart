@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../model/user_response.dart';
 import '../repository/auth_repository.dart';
 import '../resources/images.dart';
-
+import 'package:intl/intl.dart';
 abstract class Utils {
   static String? token;
   static String? cache;
@@ -22,8 +22,15 @@ abstract class Utils {
   static ValueNotifier<int> totalItems = ValueNotifier<int>(0); // <-- this one
 
 
+  static String convertDateTimeToSqlDateFormat(DateTime date) {
+    String isoString = date.toIso8601String();
+    return isoString.split('T')[0];
+  }
+  static String formatNumber(int number) {
+    final formatter = NumberFormat.decimalPattern('fr_FR');
 
-
+    return formatter.format(number);
+  }
 
   static String getImagePath(DeliveryImage image, {String format = 'png'}) {
     return 'assets/${image.name}.$format';

@@ -78,7 +78,6 @@ class LoginFormBloc extends FormBloc<String, String> {
       print("exception $e");
       emitFailure();
     }
-    emitSuccess();
 
   }
 }

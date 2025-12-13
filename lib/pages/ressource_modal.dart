@@ -19,7 +19,7 @@ class ResourceSelectionModal extends StatefulWidget {
 
 class _ResourceSelectionModalState extends State<ResourceSelectionModal> {
   // Un Set est idéal pour gérer les sélections uniques et rapides
-  late Set<String> _selectedIds;
+  late Set<int?> _selectedIds;
 
   @override
   void initState() {
@@ -56,7 +56,7 @@ class _ResourceSelectionModalState extends State<ResourceSelectionModal> {
                 return CheckboxListTile(
                   value: isSelected,
                   secondary: Icon(res.icon, color: Colors.blue),
-                  title: Text(res.name),
+                  title: Text(res.nom ?? ""),
                   subtitle: Text(res.type.toUpperCase()),
                   onChanged: (bool? newValue) {
                     setState(() {

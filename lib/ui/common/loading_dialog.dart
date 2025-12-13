@@ -40,7 +40,7 @@ class LoadingDialog extends StatelessWidget {
                 padding: const EdgeInsets.all(12.0),
                 child:  LoadingIndicator(
                   indicatorType: Indicator.lineSpinFadeLoader,
-                  colors: [DeliveryColors.gray],
+                  colors: [DeliveryColors.black],
                 )
             ),
             Text(text ?? "", style: TextStyle(color: Colors.white),)

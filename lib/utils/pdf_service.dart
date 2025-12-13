@@ -11,7 +11,7 @@ import '../model/document.dart';
 
 
 /// Génère le PDF en mémoire (Uint8List)
-Future<Uint8List> generateDocumentPdf(Document document) async {
+Future<Uint8List> generateDocumentPdf(Facture document) async {
   final pdf = pw.Document();
   final dateFormat = DateFormat('dd/MM/yyyy');
   final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: '€');
@@ -33,7 +33,7 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
             // 1. Titre (Facture ou Devis)
             pw.Center(
               child: pw.Text(
-                document.type.toUpperCase()+" " + document.numero,
+                document.reference ?? "",
                 style: headerStyle,
               ),
             ),
@@ -51,11 +51,11 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       _buildPdfText("CLIENT:", defaultStyle.copyWith(color: PdfColors.grey700)),
-                      pw.SizedBox(height: 4),
-                      _buildPdfText(document.client, defaultStyle.copyWith(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                     // pw.SizedBox(height: 4),
+                    //  _buildPdfText(document.client, defaultStyle.copyWith(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                       pw.SizedBox(height: 12),
                       _buildPdfText("RÉFÉRENCE CLIENT:", defaultStyle.copyWith(color: PdfColors.grey700)),
-                      _buildPdfText(document.reference.isNotEmpty ? document.reference : "N/A", defaultStyle),
+                      _buildPdfText(document.clientId.toString(), defaultStyle),
                     ],
                   ),
                 ),
@@ -66,9 +66,8 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _buildPdfHeaderRow("Date d'émission:", dateFormat.format(document.date), defaultStyle),
-                      if (document.type == 'Facture')
-                        _buildPdfHeaderRow("Statut:", document.status, defaultStyle.copyWith(color: _getPdfStatusColor(document.status))),
+                      _buildPdfHeaderRow("Date d'émission:", document.date.toString(), defaultStyle),
+                        _buildPdfHeaderRow("Statut:", document.status ?? "", defaultStyle.copyWith(color: _getPdfStatusColor(document.status ?? ""))),
                     ],
                   ),
                 ),
@@ -78,7 +77,7 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
             pw.SizedBox(height: 40),
 
             // 3. Tableau des Articles
-            _buildPdfArticlesTable(document.articles, defaultStyle, currencyFormat, primaryColor),
+            _buildPdfArticlesTable(document.articles ?? [], defaultStyle, currencyFormat, primaryColor),
 
             pw.SizedBox(height: 40),
 
@@ -95,15 +94,15 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
                   padding: const pw.EdgeInsets.all(10),
                   child: pw.Column(
                     children: [
-                      _buildPdfTotalRow("MONTANT HT:", document.totalTTC / 1.2, currencyFormat, totalStyle.copyWith(fontSize: 10)),
+                      _buildPdfTotalRow("MONTANT HT:", document.totalTtc! / 1.2, currencyFormat, totalStyle.copyWith(fontSize: 10)),
                       pw.Divider(color: PdfColors.grey300, thickness: 1, height: 15),
-                      _buildPdfTotalRow("TVA (20%):", document.totalTTC - (document.totalTTC / 1.2), currencyFormat, totalStyle.copyWith(fontSize: 10)),
+                      _buildPdfTotalRow("TVA (20%):", document.totalTtc! - (document.totalTtc! / 1.2), currencyFormat, totalStyle.copyWith(fontSize: 10)),
                       pw.Divider(color: PdfColors.grey300, thickness: 1, height: 15),
 
                       pw.Container(
                         color: PdfColors.grey200,
                         padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                        child: _buildPdfTotalRow("TOTAL À PAYER TTC:", document.totalTTCAPayer, currencyFormat, totalStyle.copyWith(color: primaryColor)),
+                        child: _buildPdfTotalRow("TOTAL À PAYER TTC:", document.totalHt ?? 0, currencyFormat, totalStyle.copyWith(color: primaryColor)),
                       ),
                     ],
                   ),
@@ -115,7 +114,7 @@ Future<Uint8List> generateDocumentPdf(Document document) async {
 
             // 5. Bas de page
             pw.Text(
-              "Conditions de ${document.type == 'Devis' ? 'Validité' : 'Paiement'}: Paiement sous 30 jours après la date d'émission.",
+              " ${document.notes }",
               style:  pw.TextStyle(fontSize: 8, color: PdfColors.black),
             ),
           ],

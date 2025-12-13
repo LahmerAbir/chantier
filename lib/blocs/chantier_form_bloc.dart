@@ -1,27 +1,27 @@
+
+import 'package:chantier/repository/chantier_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../model/homme.dart';
-
-
+import '../utils/utils.dart';
 
 class ChantierFormBloc extends FormBloc<String, String> {
-  final nomChantier = TextFieldBloc(
-    validators: [FieldBlocValidators.required],
-  );
-  final client = TextFieldBloc(
-    validators: [FieldBlocValidators.required],
-  );
+  final nomChantier = TextFieldBloc(validators: [FieldBlocValidators.required]);
+  final client = TextFieldBloc(validators: [FieldBlocValidators.required]);
   final budget = TextFieldBloc(
-    validators: [FieldBlocValidators.required, _validateBudget], // Ajout d'une validation simple
+    validators: [
+      FieldBlocValidators.required,
+      _validateBudget,
+    ],
   );
 
   // 2. Champ Status (Dropdown)
   final status = SelectFieldBloc<String, dynamic>(
     validators: [FieldBlocValidators.required],
-    items: ['En cours', 'Livré', 'Retard', 'En attente'],
-    initialValue: 'En attente',
+    items: ['en cours', 'terminé', 'en attente'],
+    initialValue: 'en attente',
   );
 
   // 3. Champs de Date
@@ -34,15 +34,14 @@ class ChantierFormBloc extends FormBloc<String, String> {
     initialValue: null,
   );
 
-  final hommesAssigned = InputFieldBloc<List<Homme>, dynamic>(
-    initialValue: [],
-  );
+  final hommesAssigned = InputFieldBloc<List<Homme>, dynamic>(initialValue: []);
   final materielAssigned = InputFieldBloc<List<Materiel>, dynamic>(
     initialValue: [],
   );
   final ressourcesAssigned = InputFieldBloc<List<RessourceBase>, dynamic>(
     initialValue: [],
   );
+
   ChantierFormBloc() {
     addFieldBlocs(
       fieldBlocs: [
@@ -54,7 +53,7 @@ class ChantierFormBloc extends FormBloc<String, String> {
         dateFin,
         hommesAssigned,
         materielAssigned,
-        ressourcesAssigned
+        ressourcesAssigned,
       ],
     );
   }
@@ -78,14 +77,31 @@ class ChantierFormBloc extends FormBloc<String, String> {
     print('Client: ${client.value}');
     print('Statut: ${status.value}');
     print('Budget: ${budget.value}');
-    print('Ressources assignées: ${assigned.map((r) => r.name).join(', ')}');
+    print('Ressources assignées: ${assigned.map((r) => r.nom).join(', ')}');
+    var dateD = Utils.convertDateTimeToSqlDateFormat(dateDebut.value ?? DateTime.now());
+    var dateF = Utils.convertDateTimeToSqlDateFormat(dateDebut.value ?? DateTime.now());
+    try {
+      var res = await ChantierRepository().addChantiers(
+        nom: nomChantier.value,
+        owner: client.value,
+        adresse: nomChantier.value,
+        date_emission: dateD,
+        dateecheeance: dateF,
+        total: int.parse(budget.value),
+        status: status.value == "terminé" ? "fini" :  status.value,
+      );
+      if (res != null)
+        emitSuccess(
+          canSubmitAgain: true,
+          successResponse: 'Chantier ${nomChantier.value} créé avec succès.',
+        );
+      else
+        emitFailure();
+    }catch(e)
+    {
+      emitFailure();
 
-    // Simuler l'envoi des données
-    await Future.delayed(const Duration(seconds: 1));
+    }
 
-    emitSuccess(
-      canSubmitAgain: true,
-      successResponse: 'Chantier ${nomChantier.value} créé avec succès.',
-    );
   }
 }

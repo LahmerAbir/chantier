@@ -152,14 +152,13 @@ class DocumentFormBloc extends FormBloc<String, String> {
     }
     final List<Article> finalArticles = articleBlocs.map((bloc) => bloc.articleData).toList();
 
-    final Document newDocument = Document(
-      type: type.value ?? "",
-      numero: numero.value,
-      date: date.value!,
-      client: client.value,
+    final Facture newDocument = Facture(
+   //   type: type.value ?? "",
       reference: reference.value,
-      totalTTC: double.parse(totalTTC.value.replaceAll(RegExp(r'[^\d.]'), '')),
-      totalTTCAPayer: double.parse(totalTTCAPayer.value.replaceAll(RegExp(r'[^\d.]'), '')),
+      date: date.value.toString(),
+     // client: client.value,
+      totalTtc: int.parse(totalTTC.value.replaceAll(RegExp(r'[^\d.]'), '')),
+      totalHt: double.parse(totalTTCAPayer.value.replaceAll(RegExp(r'[^\d.]'), '')),
       status: status.value ?? "",
       articles: finalArticles,
     );

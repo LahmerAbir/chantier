@@ -1,0 +1,120 @@
+import 'package:chantier/model/chantier.dart';
+import 'package:chantier/model/homme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../data/auth_api.dart';
+import '../data/chantier_api.dart';
+import '../model/AuthResponse.dart';
+import '../model/user_response.dart';
+import '../utils/utils.dart';
+
+class ChantierRepository {
+  final chantierApi = ChantierApi();
+  String? token;
+
+  Future<List<Chantier>?> getChantiers() async {
+    try {
+      final resp = await chantierApi.getChantier();
+      if (resp != null) {
+          var response = ChantierData.fromJson(resp.data);
+          final List<Chantier> list = response.data ?? [];
+          return list;
+
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
+  Future<bool?> addChantiers({
+    String? nom,
+    String? owner,
+    String? adresse,
+    String? date_emission,
+    String? dateecheeance,
+    int? total,
+    String? status,
+  }) async {
+    try {
+      final resp = await chantierApi.addChantier(
+        nom: nom,
+        owner: owner,
+        adresse: adresse,
+        date_emission: date_emission,
+        dateecheeance: dateecheeance,
+        total: total,
+        status: status,
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
+  Future<List<Homme>?> getHommes() async {
+    try {
+      final resp = await chantierApi.getHommes();
+      if (resp != null) {
+        if (resp.statusCode == 200) {
+          var response = HommeData.fromJson(resp.data);
+          final List<Homme> list = response.data ?? [];
+
+          return list;
+        } else {
+          return null;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
+  Future<List<Materiel>?> getMateriel() async {
+    try {
+      final resp = await chantierApi.getMachines();
+      if (resp != null) {
+        if (resp.statusCode == 200) {
+          var response = MaterielData.fromJson(resp.data);
+          final List<Materiel> list = response.data ?? [];
+
+          return list;
+        } else {
+          return null;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
+  Future<List<Camion>?> getCamions() async {
+    try {
+      final resp = await chantierApi.getCamions();
+      if (resp != null) {
+        if (resp.statusCode == 200) {
+          var response = CamionData.fromJson(resp.data);
+          final List<Camion> list = response.data ?? [];
+
+          return list;
+        } else {
+          return null;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+}

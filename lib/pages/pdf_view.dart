@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 
 class PdfPreviewPage extends StatelessWidget {
-  final Document document;
+  final Facture document;
 
   const PdfPreviewPage({required this.document, super.key});
 
@@ -16,7 +16,7 @@ class PdfPreviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Aperçu ${document.type} N°${document.numero}"),
+        title: Text("Aperçu ${document.reference}"),
         backgroundColor: Colors.blue.shade800,
         foregroundColor: Colors.white,
       ),

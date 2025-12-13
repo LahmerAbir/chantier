@@ -1,5 +1,7 @@
 // lib/screens/documents_screen.dart
 import 'package:chantier/pages/pdf_view.dart';
+import 'package:chantier/repository/devis&facture_repository.dart';
+import 'package:chantier/ui/common/loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
@@ -16,41 +18,35 @@ class DocumentsPage extends StatefulWidget {
 }
 
 class _DocumentsPageState extends State<DocumentsPage> {
-  List<Document> documents = [
-    Document(
-      type: 'Devis',
-      numero: 'D2025-005',
-      date: DateTime(2025, 11, 15),
-      client: 'Sarl Tech',
-      reference: 'Ref-B3',
-      totalTTC: 2400.00,
-      totalTTCAPayer: 2400.00,
-      status: 'En attente',
-      articles: [],
-    ),
-    Document(
-      type: 'Facture',
-      numero: 'F2025-001',
-      date: DateTime(2025, 12, 1),
-      client: 'M. Dupont',
-      reference: 'Ref-A1',
-      totalTTC: 480.00,
-      totalTTCAPayer: 480.00,
-      status: 'Émise',
-      articles: [],
-    ),
-  ];
+  List<Facture> documents = [];
 
   void _openAddDocumentScreen() {
     Navigator.of(context)
         .push(
           MaterialPageRoute(builder: (context) => const NewDocumentScreen()),
         )
-        .then(
-          (_) => setState(() {
-            // Recharger la liste après un éventuel ajout/modification
-          }),
-        );
+        .then((_) => setState(() {}));
+  }
+
+  bool isLoading = true;
+
+  @override
+  initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        documents = await FactureRepository().getFactures() ?? [];
+        setState(() {
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list chantier $e");
+      }
+    });
   }
 
   Color _getStatusColor(String status) {
@@ -69,6 +65,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
         return Colors.grey;
     }
   }
+
   final ScrollController scrollController = ScrollController();
 
   @override
@@ -97,143 +94,163 @@ class _DocumentsPageState extends State<DocumentsPage> {
           ),
           const SizedBox(height: 20),
 
-        SizedBox(
-
-          width: MediaQuery.of(context).size.width * 0.9,
-          child: Scrollbar(
-            controller: scrollController,
-            thumbVisibility: true,
-            child :
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              controller: scrollController,
-              child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(
-                        label: Text(
-                          'Type/N°',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Client',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Date',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Total TTC',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Status',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Actions',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-
-                    rows: documents.map((doc) {
-                      return DataRow(
-                        cells: [
-                          DataCell(
-                            Text(
-                              "${doc.type} ${doc.numero}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
+          isLoading
+              ? Loader()
+              : documents.isNotEmpty
+              ? SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  child: Scrollbar(
+                    controller: scrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      scrollDirection: isMobile
+                          ? Axis.horizontal
+                          : Axis.vertical,
+                      controller: scrollController,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Card(
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                          DataCell(Text(doc.client)),
-                          DataCell(
-                            Text(DateFormat('dd/MM/yyyy').format(doc.date)),
-                          ),
-                          DataCell(
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                "${doc.totalTTC.toStringAsFixed(2)} €",
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(
-                                  doc.status,
-                                ).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                doc.status,
-                                style: TextStyle(
-                                  color: _getStatusColor(doc.status),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.edit,
-                                    color: Colors.blue.shade700,
-                                    size: 20,
+                            child: DataTable(
+                              columns: const [
+                                DataColumn(
+                                  label: Text(
+                                    'Type/N°',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  onPressed: () =>
-                                      print("Modifier ${doc.numero}"),
-                                  tooltip: 'Modifier',
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                    size: 20,
+                               /* DataColumn(
+                                  label: Text(
+                                    'Client',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  onPressed: () =>
-                                      setState(() => documents.remove(doc)),
-                                  tooltip: 'Supprimer',
+                                ),*/
+                                DataColumn(
+                                  label: Text(
+                                    'Date',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Total TTC',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Status',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Actions',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
+
+                              rows: documents.map((doc) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      Text(
+                                        "${doc.reference}",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    //DataCell(Text(doc.client)),
+                                    DataCell(Text(doc.date ?? "")),
+                                    DataCell(
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Text("${doc.totalTtc} €"),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(
+                                            doc.status ?? "",
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          doc.status ?? "",
+                                          style: TextStyle(
+                                            color: _getStatusColor(
+                                              doc.status ?? "",
+                                            ),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                              Icons.edit,
+                                              color: Colors.blue.shade700,
+                                              size: 20,
+                                            ),
+                                            onPressed: () => print(
+                                              "Modifier ${doc.reference}",
+                                            ),
+                                            tooltip: 'Modifier',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                              size: 20,
+                                            ),
+                                            onPressed: () => setState(
+                                              () => documents.remove(doc),
+                                            ),
+                                            tooltip: 'Supprimer',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
                             ),
                           ),
-                        ],
-                      );
-                    }).toList(),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ))),
-          ),
+                )
+              : Center(child: Text("Liste est vide")),
         ],
       ),
     );
@@ -246,7 +263,9 @@ class NewDocumentScreen extends StatefulWidget {
   @override
   State<NewDocumentScreen> createState() => _NewDocumentScreenState();
 }
-bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+
+bool isMobile =
+    defaultTargetPlatform == TargetPlatform.android ||
     defaultTargetPlatform == TargetPlatform.iOS;
 
 class _NewDocumentScreenState extends State<NewDocumentScreen> {
@@ -276,19 +295,21 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                 });
               },
               onSuccess: (context, state) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.successResponse!)));
-                final List<Article> finalArticles = docFormBloc.articleBlocs.map((bloc) => bloc.articleData).toList();
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.successResponse!)));
+                final List<Article> finalArticles = docFormBloc.articleBlocs
+                    .map((bloc) => bloc.articleData)
+                    .toList();
 
-                final Document newDocument = Document(
-                  type: docFormBloc.type.value ?? "",
-                  numero: docFormBloc.numero.value, // Placeholder
-                  date: DateTime.now(),
-                  client:docFormBloc.client.value,
+                final Facture newDocument = Facture(
+                  date: docFormBloc.date.toString(),
+                  //  client:docFormBloc.client.value,
                   reference: docFormBloc.reference.value,
-                  totalTTC: double.parse(docFormBloc.totalTTC.value) ,
-                  totalTTCAPayer: double.parse(docFormBloc.totalTTCAPayer.value),
-                  status:  docFormBloc.status.value ?? "",
-                  articles:  finalArticles, // Placeholder
+                  totalTtc: int.parse(docFormBloc.totalTTC.value),
+                  totalHt: double.parse(docFormBloc.totalTTCAPayer.value),
+                  status: docFormBloc.status.value ?? "",
+                  articles: finalArticles, // Placeholder
                 );
 
                 // Ouvre la page d'aperçu PDF
@@ -415,7 +436,6 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
     );
   }
 
-
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
@@ -452,7 +472,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         TextFieldBlocBuilder(
           textFieldBloc: bloc,
           decoration: _inputDecoration(hintText: hint),
-          textStyle: TextStyle(fontSize: isMobile ?  12 : 16),
+          textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
         ),
       ],
     );
@@ -466,7 +486,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         _buildLabel('Date'),
         DateTimeFieldBlocBuilder(
           dateTimeFieldBloc: bloc,
-          textStyle: TextStyle(fontSize: isMobile ?  12 : 16),
+          textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
           format: DateFormat('dd/MM/yyyy'),
           initialDate: DateTime.now(),
           firstDate: DateTime(2020),
@@ -494,8 +514,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
           selectFieldBloc: bloc,
           decoration: _inputDecoration(hintText: "Facture ou Devis"),
           itemBuilder: (context, value) => FieldItem(child: Text(value)),
-          textStyle: TextStyle(fontSize: isMobile ?  14 : 16),
-
+          textStyle: TextStyle(fontSize: isMobile ? 14 : 16),
         ),
       ],
     );
@@ -510,8 +529,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
           selectFieldBloc: bloc.status,
           decoration: _inputDecoration(hintText: "Statut du document"),
           itemBuilder: (context, value) => FieldItem(child: Text(value)),
-          textStyle: TextStyle(fontSize: isMobile ?  14 : 16),
-
+          textStyle: TextStyle(fontSize: isMobile ? 14 : 16),
         ),
       ],
     );

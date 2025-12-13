@@ -107,13 +107,13 @@ class _LoginPageState extends State<LoginPage> {
               LoadingDialog.show(context, root: false);
             },
             onSuccess: (context, state) async {
-             /* LoadingDialog.show(context, root: false);
+              LoadingDialog.show(context, root: false);
 
               widget.onSuccess?.call();
               Utils.getFromPreference();
               Utils.checkIsfirstCnx();
               Utils.isFirstCnx(true);
-              LoadingDialog.hide(context);*/
+              LoadingDialog.hide(context);
            context.router.replaceAll([HomeRoute()]);
               return;
             },
