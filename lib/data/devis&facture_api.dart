@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../model/document.dart';
 import '../resources/config.dart';
 import '../utils/utils.dart';
 
@@ -27,21 +28,28 @@ class FactureApi {
     }
   }
 
-  Future<Response?> addChantier({String? nom , String? owner , String? adresse , String? date_emission , String? dateecheeance , int? total , String? status}) async {
+  Future<Response?> addFactures({  String? reference,
+    String? date,
+    int? client_id,
+    int? total_ht,
+    int? total_ttc,
+    int? montant_paye,
+    String? status,
+    String? notes,
+    List<Article>? articles ,}) async {
     var token = await Utils.getToken();
     dio.options.headers['Content-Type'] = "Application/json";
     dio.options.headers['accept'] = "Application/json";
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.post(Config.baseUrl + '/chantiers', data: {
-          "nom": nom,
-          "owner": owner,
-          "address": adresse,
-          "date_emission": date_emission,
-          "date_echeance": dateecheeance,
-          "total": total,
-          "status": status
+      return await dio.post(Config.baseUrl + '/factures', data: {
+        "reference": reference,
+        "client_id": client_id,
+        "date": date,
+
+        "tva": 20,
+        "lignes": articles ?? []
 
       }).catchError((
           onError,

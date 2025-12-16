@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../blocs/art_form_bloc.dart';
+import 'client.dart';
 
 class FactureData {
   bool? success;
@@ -40,13 +41,14 @@ class Facture {
   int? devisId;
   String? date;
   String? dateEcheance;
-  double? totalHt;
+  int? totalHt;
   int? tva;
   int? totalTtc;
   int? montantPaye;
   String? status;
   String? notes;
   String? createdAt;
+  Client? client;
   List<Article>? articles;
 
   Facture(
@@ -58,6 +60,7 @@ class Facture {
         this.dateEcheance,
         this.totalHt,
         this.tva,
+        this.client,
         this.totalTtc,
         this.montantPaye,
         this.status,
@@ -123,15 +126,47 @@ class Meta {
 }
 
 class Article {
-  String description;
-  int quantite;
-  double prixUnitaire;
+  int? id;
+  int? factureId;
+  int? produitId;
+  String? description;
+  int? quantite;
+  String? unite;
+  int? prixUnitaire;
+  int? total;
 
-  Article({
-    required this.description,
-    required this.quantite,
-    required this.prixUnitaire,
-  });
+  Article(
+      {this.id,
+        this.factureId,
+        this.produitId,
+        this.description,
+        this.quantite,
+        this.unite,
+        this.prixUnitaire,
+        this.total});
 
-  double get prixTotal => quantite * prixUnitaire;
+  Article.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    factureId = json['facture_id'];
+    produitId = json['produit_id'];
+    description = json['description'];
+    quantite = json['quantite'];
+    unite = json['unite'];
+    prixUnitaire = json['prix_unitaire'];
+    total = json['total'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['facture_id'] = this.factureId;
+    data['produit_id'] = this.produitId;
+    data['description'] = this.description;
+    data['quantite'] = this.quantite;
+    data['unite'] = this.unite;
+    data['prix_unitaire'] = this.prixUnitaire;
+    data['total'] = this.total;
+    return data;
+  }
+
 }

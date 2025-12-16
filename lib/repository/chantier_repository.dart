@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/auth_api.dart';
 import '../data/chantier_api.dart';
 import '../model/AuthResponse.dart';
+import '../model/client.dart';
 import '../model/user_response.dart';
 import '../utils/utils.dart';
 
@@ -24,6 +25,116 @@ class ChantierRepository {
       return null;
     } catch (e) {
       print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+  Future<List<Client>?> getClients() async {
+    try {
+      final resp = await chantierApi.getClients();
+      if (resp != null) {
+        var response = ClientData.fromJson(resp.data);
+        final List<Client> list = response.data ?? [];
+        return list;
+
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion client $e");
+      return null;
+    }
+  }
+  Future<bool?> addClient({
+    String? nom , String? email , String? adresse , String? telephone , String? ville  , String? pays
+  }) async {
+    try {
+      final resp = await chantierApi.addClient(
+        nom: nom,
+        email: email,
+        adresse: adresse,
+        telephone: telephone,
+        ville: ville,
+        pays: pays,
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion client $e");
+      return null;
+    }
+  }
+  Future<bool?> addMatr({
+    String? nom,
+    String? type,
+    String? matricule,
+    int? cout_journalier,
+  }) async {
+    try {
+      final resp = await chantierApi.addMat(
+        nom: nom,
+        type: type,
+        matricule: matricule,
+        cout_journalier: cout_journalier,
+
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion materiel $e");
+      return null;
+    }
+  }
+  Future<bool?> addHomme({
+    String? nom,
+    String? prenom,
+    String? email,
+    String? telephone,
+    String? specialite,
+  }) async {
+    try {
+      final resp = await chantierApi.addHomme(
+        nom : nom,
+        prenom : prenom,
+        email : email,
+        telephone : telephone,
+        specialite :  specialite,
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion homme $e");
+      return null;
+    }
+  }
+  Future<bool?> addCamion({
+    String? nom,
+    String? capacite,
+    String? matricule,
+    int? cout_journalier
+  }) async {
+    try {
+      final resp = await chantierApi.addCamion(
+        nom: nom,
+        capacite: capacite,
+        matricule: matricule,
+        cout_journalier: cout_journalier,
+
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion camion $e");
       return null;
     }
   }

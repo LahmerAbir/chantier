@@ -1,3 +1,4 @@
+import 'package:chantier/pages/client_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,9 @@ import '../resources/images.dart';
 import '../utils/utils.dart';
 import 'chantier.dart';
 import 'devis&facture.dart';
-import 'listing_entity.dart';
+import 'listing_camion.dart';
+import 'listing_homme.dart';
+import 'listing_mat.dart';
 
 @RoutePage()
 class HomePage extends StatelessWidget {
@@ -52,17 +55,18 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _pages = [
     const DashboardPage(),
     const ChantiersPage(),
-    const DocumentsPage(), // Devis & Factures
-    const EntityManagementScreen(
+    const DocumentsPage(),
+    ClientManagementScreen(),// Devis & Factures
+    const MatManagementScreen(
       title: "Gestion des Matériels",
       entityName: "Matériel",
     ),
-    const EntityManagementScreen(
+    const HommeManagementScreen(
       title: "Gestion des Employées",
       entityName: "hommes",
     ),
-    const EntityManagementScreen(
-      title: "Gestion des camions",
+    const CamionManagementScreen(
+      title: "Gestion des Camions",
       entityName: "Camion",
     ),
   ];
@@ -73,6 +77,7 @@ class _MainLayoutState extends State<MainLayout> {
         defaultTargetPlatform == TargetPlatform.iOS;
 
     return Scaffold(
+        resizeToAvoidBottomInset : true,
       body: Row(
         children: [
           if (!isMobile)
@@ -172,29 +177,36 @@ class NavigationSideBar extends StatelessWidget {
             onTap: () => onDestinationSelected(2),
           ),
           _NavItem(
-            icon: Icons.handyman_outlined,
-            label: "Matériel",
+            icon: Icons.perm_contact_cal_rounded,
+            label: "Clients",
             index: 3,
             isSelected: selectedIndex == 3,
             onTap: () => onDestinationSelected(3),
           ),
-          // Autres items simulés
           _NavItem(
-            icon: Icons.folder_open,
-            label: "Hommes",
+            icon: Icons.handyman_outlined,
+            label: "Matériel",
             index: 4,
             isSelected: selectedIndex == 4,
-            onTap: () {
-              onDestinationSelected(4);
-            },
+            onTap: () => onDestinationSelected(4),
           ),
+          // Autres items simulés
           _NavItem(
-            icon: Icons.folder_open,
-            label: "Camions",
+            icon: Icons.person,
+            label: "Hommes",
             index: 5,
             isSelected: selectedIndex == 5,
             onTap: () {
               onDestinationSelected(5);
+            },
+          ),
+          _NavItem(
+            icon: Icons.emoji_transportation,
+            label: "Camions",
+            index: 6,
+            isSelected: selectedIndex == 6,
+            onTap: () {
+              onDestinationSelected(6);
             },
           ),
         ],

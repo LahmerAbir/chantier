@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 import '../blocs/chantier_form_bloc.dart';
+import '../model/client.dart';
 import '../model/homme.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
@@ -30,6 +31,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
   List<Homme> _assignedHommes = [];
   List<Materiel> _assignedMateriels = [];
   List<Camion> _assignedCamions = [];
+  List<Client> clients = [];
   late List<RessourceBase> _allResources;
 
   List<Homme> _initialHommes = [];
@@ -45,6 +47,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
         var hommes = await ChantierRepository().getHommes() ?? [];
         var machines = await ChantierRepository().getMateriel() ?? [];
         var camions = await ChantierRepository().getCamions() ?? [];
+        clients = await ChantierRepository().getClients() ?? [];
         setState(() {
           _initialHommes = hommes;
           _availableHommes = hommes;
@@ -93,6 +96,8 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
       child: Builder(
         builder: (context) {
           final chantierFormBloc = BlocProvider.of<ChantierFormBloc>(context);
+          chantierFormBloc.client.updateItems(clients);
+
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateAssignedResources(chantierFormBloc);
@@ -153,10 +158,17 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
                             "Ex: Résidence Le Parc",
                           ),
                           const SizedBox(height: 15),
-                          _buildTextField(
-                            chantierFormBloc.client,
-                            "Client",
-                            "Ex: Société Immobilière",
+                          isLoading ? Loader() :  DropdownFieldBlocBuilder<Client>(
+                            selectFieldBloc: chantierFormBloc.client,
+                            itemBuilder: (context, client) => FieldItem(
+                              child: Text(client.nom ?? 'Client sans nom'),
+                            ),
+
+
+                            decoration: const InputDecoration(
+                              labelText: 'Client',
+                              hintText: 'Sélectionnez le client',
+                            ),
                           ),
                           const SizedBox(height: 15),
 

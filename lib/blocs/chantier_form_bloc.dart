@@ -4,12 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../model/client.dart';
 import '../model/homme.dart';
 import '../utils/utils.dart';
 
 class ChantierFormBloc extends FormBloc<String, String> {
   final nomChantier = TextFieldBloc(validators: [FieldBlocValidators.required]);
-  final client = TextFieldBloc(validators: [FieldBlocValidators.required]);
+  final client = SelectFieldBloc<Client, dynamic>(
+    validators: [FieldBlocValidators.required],
+    initialValue: null,
+    items: const [],
+  );
   final budget = TextFieldBloc(
     validators: [
       FieldBlocValidators.required,
@@ -83,12 +88,13 @@ class ChantierFormBloc extends FormBloc<String, String> {
     try {
       var res = await ChantierRepository().addChantiers(
         nom: nomChantier.value,
-        owner: client.value,
+        owner: client.value?.nom ?? "",
+
         adresse: nomChantier.value,
         date_emission: dateD,
         dateecheeance: dateF,
         total: int.parse(budget.value),
-        status: status.value == "terminé" ? "fini" :  status.value,
+        status: status.value ,
       );
       if (res != null)
         emitSuccess(

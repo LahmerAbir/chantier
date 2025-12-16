@@ -1,14 +1,6 @@
 import 'package:chantier/data/devis&facture_api.dart';
-import 'package:chantier/model/chantier.dart';
 import 'package:chantier/model/document.dart';
-import 'package:chantier/model/homme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../data/auth_api.dart';
-import '../data/chantier_api.dart';
-import '../model/AuthResponse.dart';
-import '../model/user_response.dart';
-import '../utils/utils.dart';
 
 class FactureRepository {
   final factureApi = FactureApi();
@@ -30,24 +22,28 @@ class FactureRepository {
     }
   }
 
- /* Future<bool?> addChantiers({
-    String? nom,
-    String? owner,
-    String? adresse,
-    String? date_emission,
-    String? dateecheeance,
-    int? total,
+  Future<bool?> addFacture({
+    String? reference,
+    String? date,
+    int? client_id,
+    int? total_ht,
+    int? total_ttc,
+    int? montant_paye,
     String? status,
+    String? notes,
+    List<Article>? articles
   }) async {
     try {
-      final resp = await chantierApi.addChantier(
-        nom: nom,
-        owner: owner,
-        adresse: adresse,
-        date_emission: date_emission,
-        dateecheeance: dateecheeance,
-        total: total,
+      final resp = await factureApi.addFactures(
+        reference: reference,
+        date: date,
+        client_id: client_id,
+        total_ht: total_ht,
+        total_ttc: total_ttc,
+        montant_paye: montant_paye,
         status: status,
+        notes: notes,
+        articles: articles,
       );
       if (resp != null) {
         return true;
@@ -58,7 +54,7 @@ class FactureRepository {
       print("exceeeppttion chantier $e");
       return null;
     }
-  }*/
+  }
 
 
 }

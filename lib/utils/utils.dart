@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 
 import 'package:flutter/material.dart';
@@ -21,6 +22,21 @@ abstract class Utils {
 
   static ValueNotifier<int> totalItems = ValueNotifier<int>(0); // <-- this one
 
+ static String genererReference(String typeDocument, DateTime date) {
+   try {
+     String prefixe = typeDocument.toUpperCase() == 'FACTURE' ? 'FAC' : 'DEV';
+
+     String annee = date.year.toString();
+
+     final Random random = Random();
+     int randomNumber = random.nextInt(999) + 1;
+     return '$prefixe-$annee-$randomNumber';
+   }catch(e)
+   {
+     print("exception in generate ref ");
+     return "0";
+   }
+  }
 
   static String convertDateTimeToSqlDateFormat(DateTime date) {
     String isoString = date.toIso8601String();

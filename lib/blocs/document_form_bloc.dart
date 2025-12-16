@@ -2,9 +2,12 @@
 
 import 'dart:async';
 
+import 'package:chantier/repository/devis&facture_repository.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
+import '../model/client.dart';
 import '../model/document.dart';
+import '../utils/utils.dart';
 import 'art_form_bloc.dart';
 
 class DocumentFormBloc extends FormBloc<String, String> {
@@ -14,25 +17,24 @@ class DocumentFormBloc extends FormBloc<String, String> {
     initialValue: 'Facture',
   );
 
-  final numero = TextFieldBloc(
-    validators: [FieldBlocValidators.required],
-  );
-
   final date = InputFieldBloc<DateTime?, dynamic>(
     validators: [(value) => value == null ? 'Date requise.' : null],
     initialValue: DateTime.now(),
   );
 
-  final client = TextFieldBloc(
+  final client = SelectFieldBloc<Client, dynamic>(
     validators: [FieldBlocValidators.required],
+    initialValue: null,
+    items: const [],
   );
-
-  final reference = TextFieldBloc();
+  final notes = TextFieldBloc(
+    validators: [],
+  );
 
   final status = SelectFieldBloc<String, dynamic>(
     validators: [FieldBlocValidators.required],
-    items: ['Payée', 'Émise', 'Annulée', 'En attente', 'Retard'],
-    initialValue: 'En attente',
+    items: ['payée', 'non payée', 'partiellement payée'],
+    initialValue: 'non payée',
   );
   final List<ArticleFormBloc> articleBlocs = [
     ArticleFormBloc( ),
@@ -43,15 +45,15 @@ class DocumentFormBloc extends FormBloc<String, String> {
   );
 
   // Champs calculés
-  final totalTTC = TextFieldBloc(initialValue: '0.00 €',);
-  final totalTTCAPayer = TextFieldBloc(initialValue: '0.00 €', );
+  final totalTTC = TextFieldBloc(initialValue: '00 ',);
+  final totalTTCAPayer = TextFieldBloc(initialValue: '00 ', );
 
   // Map pour stocker les subscriptions et les annuler
   final Map<FormBloc, List<StreamSubscription>> _articleSubscriptions = {};
 
   DocumentFormBloc() {
     addFieldBlocs(
-      fieldBlocs: [type, numero, date, client, reference, status, articlesListState],
+      fieldBlocs: [type, date, client, status, articlesListState , notes],
     );
     _reconfigureArticleListeners();
   }
@@ -108,15 +110,13 @@ class DocumentFormBloc extends FormBloc<String, String> {
   // Met à jour les totaux et la valeur articlesListState
   void _updateFormState() {
    print("final step");
-    double subtotal = 0.0;
+    int subtotal = 0;
     final List<Article> currentArticles = [];
 
     for (final bloc in articleBlocs) {
-      // Si tous les champs du bloc sont valides, on l'inclut
       if (bloc.state.canSubmit) {
-        print("can supmit");
         final data = bloc.articleData;
-        subtotal += data.prixTotal;
+        subtotal += (data.prixUnitaire! * (data.quantite!))  ?? 0;
         currentArticles.add(data);
       }
     }
@@ -125,7 +125,7 @@ class DocumentFormBloc extends FormBloc<String, String> {
     const double tvaRate = 0.20;
     double grandTotal = subtotal * (1 + tvaRate);
 
-    totalTTC.updateValue('${grandTotal.toStringAsFixed(2)}');
+    totalTTC.updateValue('${subtotal.toStringAsFixed(2)}');
     totalTTCAPayer.updateValue('${grandTotal.toStringAsFixed(2)}');
     articlesListState.updateValue(articleBlocs);
   }
@@ -143,31 +143,41 @@ class DocumentFormBloc extends FormBloc<String, String> {
 
   @override
   void onSubmitting() async {
-    final allArticlesValid = articleBlocs.every((bloc) => bloc.state.canSubmit );
+
+    final allArticlesValid = articleBlocs.every((bloc) => bloc.state.canSubmit);
 
     if (!allArticlesValid) {
       articleBlocs.forEach((bloc) => bloc.submit());
-      emitFailure(failureResponse: "Veuillez corriger les erreurs dans la liste des articles.");
+      emitFailure(
+          failureResponse: "Veuillez corriger les erreurs dans la liste des articles.");
       return;
     }
-    final List<Article> finalArticles = articleBlocs.map((bloc) => bloc.articleData).toList();
+    print("cc in add facture");
+    final List<Article> finalArticles = articleBlocs.map((bloc) =>
+    bloc.articleData).toList();
+    var dateD = Utils.convertDateTimeToSqlDateFormat(date.value ?? DateTime.now());
+    try {
+      var ref = Utils.genererReference(type.value!.toLowerCase(), date.value!);
 
-    final Facture newDocument = Facture(
-   //   type: type.value ?? "",
-      reference: reference.value,
-      date: date.value.toString(),
-     // client: client.value,
-      totalTtc: int.parse(totalTTC.value.replaceAll(RegExp(r'[^\d.]'), '')),
-      totalHt: double.parse(totalTTCAPayer.value.replaceAll(RegExp(r'[^\d.]'), '')),
-      status: status.value ?? "",
-      articles: finalArticles,
-    );
+      var res = await FactureRepository().addFacture(
+        reference: ref,
+        date:dateD ,
+        client_id:client.value?.id ?? 1 ,
+        status: status.value,
 
-    await Future.delayed(const Duration(seconds: 1));
+        notes: notes.value,
+        articles: finalArticles,);
+      if (res != null)
+        emitSuccess(
+          canSubmitAgain: true,
+          successResponse: ref,
+        );
+      else
+        emitFailure();
+    } catch (e) {
+      print("exception in addd facture $e");
+      emitFailure();
+    }
 
-    emitSuccess(
-      canSubmitAgain: true,
-      successResponse: '${type.value} N°${numero.value} créé avec succès.',
-    );
   }
 }

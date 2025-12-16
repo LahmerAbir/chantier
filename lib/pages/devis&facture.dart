@@ -1,14 +1,16 @@
 // lib/screens/documents_screen.dart
 import 'package:chantier/pages/pdf_view.dart';
+import 'package:chantier/repository/chantier_repository.dart';
 import 'package:chantier/repository/devis&facture_repository.dart';
 import 'package:chantier/ui/common/loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
-
 import '../blocs/art_form_bloc.dart';
 import '../blocs/document_form_bloc.dart';
+import '../model/client.dart';
 import '../model/document.dart';
+import '../utils/utils.dart';
 
 class DocumentsPage extends StatefulWidget {
   const DocumentsPage({super.key});
@@ -51,15 +53,13 @@ class _DocumentsPageState extends State<DocumentsPage> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Payée':
+      case 'payée':
         return Colors.green.shade700;
-      case 'Émise':
-        return Colors.blue.shade700;
-      case 'Retard':
+      case 'non payée':
         return Colors.red.shade700;
       case 'Annulée':
         return Colors.black54;
-      case 'En attente':
+      case 'partiellement payée':
         return Colors.orange.shade700;
       default:
         return Colors.grey;
@@ -147,7 +147,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
-                                    textAlign: TextAlign.right,
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                                 DataColumn(
@@ -182,10 +182,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                     //DataCell(Text(doc.client)),
                                     DataCell(Text(doc.date ?? "")),
                                     DataCell(
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Text("${doc.totalTtc} €"),
-                                      ),
+                                      Text("${Utils.formatNumber(doc.totalTtc ?? 0)}"),
                                     ),
                                     DataCell(
                                       Container(
@@ -269,6 +266,28 @@ bool isMobile =
     defaultTargetPlatform == TargetPlatform.iOS;
 
 class _NewDocumentScreenState extends State<NewDocumentScreen> {
+
+  List<Client> clients = [];
+  bool  isLoading = true;
+
+  @override
+  initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        clients = await ChantierRepository().getClients() ?? [];
+        setState(() {
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list chantier $e");
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -277,6 +296,8 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
       child: Builder(
         builder: (context) {
           final docFormBloc = context.read<DocumentFormBloc>();
+          docFormBloc.client.updateItems(clients);
+
           return Scaffold(
             appBar: AppBar(
               title: const Text("Créer Document"),
@@ -301,13 +322,20 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                 final List<Article> finalArticles = docFormBloc.articleBlocs
                     .map((bloc) => bloc.articleData)
                     .toList();
+                 int totalTTC = 0;
+                int totalHT = 0;
 
+                for(var e in finalArticles){
+                  totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
+                }
+                totalTTC = totalHT;
                 final Facture newDocument = Facture(
-                  date: docFormBloc.date.toString(),
-                  //  client:docFormBloc.client.value,
-                  reference: docFormBloc.reference.value,
-                  totalTtc: int.parse(docFormBloc.totalTTC.value),
-                  totalHt: double.parse(docFormBloc.totalTTCAPayer.value),
+                  client: docFormBloc.client.value,
+                  clientId: docFormBloc.client.value?.id ?? 1,
+                  reference: state.successResponse,
+                  date: docFormBloc.date.value.toString() ?? "",
+                  totalTtc: totalTTC,
+                  totalHt: totalHT,
                   status: docFormBloc.status.value ?? "",
                   articles: finalArticles, // Placeholder
                 );
@@ -318,6 +346,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                     builder: (context) => PdfPreviewPage(document: newDocument),
                   ),
                 );
+
               },
               onFailure: (context, state) {
                 ScaffoldMessenger.of(
@@ -338,18 +367,10 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Champs de base (Fonctions d'aide définies ci-dessous)
                     Row(
                       children: [
                         Expanded(child: _buildTypeField(context)),
                         const SizedBox(width: 15),
-                        Expanded(
-                          child: _buildTextField(
-                            docFormBloc.numero,
-                            "Numéro",
-                            "N° de document",
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 15),
@@ -357,25 +378,29 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                       children: [
                         Expanded(child: _buildDateField(context)),
                         const SizedBox(width: 15),
-                        Expanded(
-                          child: _buildTextField(
-                            docFormBloc.client,
-                            "Client",
-                            "Nom du client",
-                          ),
-                        ),
+
+                        isLoading ? Loader() :  Expanded(
+                         child: DropdownFieldBlocBuilder<Client>(
+                                  selectFieldBloc: docFormBloc.client,
+                                  itemBuilder: (context, client) => FieldItem(
+                                    child: Text(client.nom ?? 'Client sans nom'),
+                                  ),
+
+
+                                  decoration: const InputDecoration(
+                                    labelText: 'Client',
+                                    hintText: 'Sélectionnez le client',
+                                  ),
+                                ),
+                       )
+
+
+                            // Si erreur ou état initial (non chargé)
                       ],
                     ),
                     const SizedBox(height: 15),
                     Row(
                       children: [
-                        Expanded(
-                          child: _buildTextField(
-                            docFormBloc.reference,
-                            "Référence",
-                            "Référence externe",
-                          ),
-                        ),
                         const SizedBox(width: 15),
                         Expanded(
                           child: _buildStatusField(context, docFormBloc),
@@ -394,7 +419,17 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                     ),
                     const SizedBox(height: 10),
                     _buildArticleList(context, docFormBloc),
-
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            docFormBloc.notes,
+                            "Notes",
+                            "Ecrire ...",
+                          ),
+                        ),
+                      ],
+                    ),
                     // Section Totaux
                     const SizedBox(height: 30),
                     const Text(
@@ -471,6 +506,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         _buildLabel(label),
         TextFieldBlocBuilder(
           textFieldBloc: bloc,
+          maxLines: label == "Notes" ? 4 : 1,
           decoration: _inputDecoration(hintText: hint),
           textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
         ),
@@ -585,7 +621,6 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
   Widget _buildArticleList(BuildContext context, DocumentFormBloc docBloc) {
     print("lenght articleBlocs ${docBloc.articleBlocs..length}");
 
-    // CORRECTION : Ajout du troisième type paramètre 'String' pour l'erreur.
     return StreamBuilder<
       FieldBlocState<List<ArticleFormBloc>, dynamic, dynamic>
     >(
@@ -655,7 +690,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                             child: _buildTextField(
                               itemBloc.prixUnitaire,
                               "Prix U. HT",
-                              "100.00",
+                              "100",
                             ),
                           ),
                         ],
@@ -669,7 +704,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(top: 10),
                             child: Text(
-                              "Total Article: ${article.prixTotal.toStringAsFixed(2)} €",
+                              "Total Article: ${article.total ?? 0} ",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green.shade700,
@@ -697,3 +732,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
     );
   }
 }
+
+
+
+

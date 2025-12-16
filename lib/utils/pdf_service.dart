@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 
+import '../model/client.dart';
 import '../model/document.dart';
 
 
@@ -50,17 +51,13 @@ Future<Uint8List> generateDocumentPdf(Facture document) async {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _buildPdfText("CLIENT:", defaultStyle.copyWith(color: PdfColors.grey700)),
-                     // pw.SizedBox(height: 4),
-                    //  _buildPdfText(document.client, defaultStyle.copyWith(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                      pw.SizedBox(height: 12),
-                      _buildPdfText("RÉFÉRENCE CLIENT:", defaultStyle.copyWith(color: PdfColors.grey700)),
-                      _buildPdfText(document.clientId.toString(), defaultStyle),
+                      buildClientBlock(document.client!)
+
                     ],
                   ),
                 ),
+                pw.SizedBox(width: 20),
 
-                // Colonne Droite: Numéro et Dates
                 pw.Expanded(
                   flex: 4,
                   child: pw.Column(
@@ -94,15 +91,15 @@ Future<Uint8List> generateDocumentPdf(Facture document) async {
                   padding: const pw.EdgeInsets.all(10),
                   child: pw.Column(
                     children: [
-                      _buildPdfTotalRow("MONTANT HT:", document.totalTtc! / 1.2, currencyFormat, totalStyle.copyWith(fontSize: 10)),
+                      _buildPdfTotalRow("MONTANT HT:", document.totalTtc!.toStringAsFixed(3), currencyFormat, totalStyle.copyWith(fontSize: 10)),
                       pw.Divider(color: PdfColors.grey300, thickness: 1, height: 15),
-                      _buildPdfTotalRow("TVA (20%):", document.totalTtc! - (document.totalTtc! / 1.2), currencyFormat, totalStyle.copyWith(fontSize: 10)),
+                     _buildPdfTotalRow("TVA :", "20%", currencyFormat, totalStyle.copyWith(fontSize: 10)),
                       pw.Divider(color: PdfColors.grey300, thickness: 1, height: 15),
 
                       pw.Container(
                         color: PdfColors.grey200,
                         padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                        child: _buildPdfTotalRow("TOTAL À PAYER TTC:", document.totalHt ?? 0, currencyFormat, totalStyle.copyWith(color: primaryColor)),
+                        child: _buildPdfTotalRow("TOTAL À PAYER TTC:", document.totalHt!.toStringAsFixed(3), currencyFormat, totalStyle.copyWith(color: primaryColor)),
                       ),
                     ],
                   ),
@@ -126,8 +123,88 @@ Future<Uint8List> generateDocumentPdf(Facture document) async {
   return pdf.save();
 }
 
-// --- Fonctions d'aide PDF ---
 
+
+pw.Widget buildClientBlock(Client client) {
+  // Définir le style pour les étiquettes (gras) et les données
+  final pw.TextStyle labelStyle = pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10);
+  final pw.TextStyle dataStyle = pw.TextStyle(fontSize: 10);
+  final PdfColor primaryColor = PdfColors.blueGrey800; // Couleur pour le titre
+
+  return pw.Container(
+    // 1. Définir le contour et les marges internes
+    padding: const pw.EdgeInsets.all(10),
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: PdfColors.grey500, width: 1),
+      borderRadius: pw.BorderRadius.circular(5),
+    ),
+
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // --- Titre CLIENT (avec la ligne de séparation) ---
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text('CLIENT', style: pw.TextStyle(color: primaryColor, fontWeight: pw.FontWeight.bold, fontSize: 11)),
+            pw.SizedBox(width: 8),
+            // Ligne décorative à droite du titre (simule la ligne sur votre image)
+            pw.Expanded(
+              child: pw.Container(
+                height: 1,
+                color: PdfColors.grey400,
+              ),
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 8), // Espace après le titre
+
+        // --- 1. Nom du Client (en gras, comme le nom de la société) ---
+        pw.Text(
+          client.nom ?? 'N/A',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+        ),
+
+        // --- 2. Matricule Fiscale (MF) / ID ---
+        _buildClientDetailRow('MF', '1891628/W/A/M/000', labelStyle, dataStyle),
+        // NOTE: Le MF n'est pas dans votre modèle Client, vous devrez le passer en paramètre ou l'ajouter au modèle.
+
+        // --- 3. Adresse ---
+        _buildClientDetailRow('Adresse', client.adresse ?? 'N/A', labelStyle, dataStyle),
+
+        // --- 4. Téléphone ---
+        _buildClientDetailRow('Téléphone', client.telephone ?? 'N/A', labelStyle, dataStyle),
+
+        // --- 5. Email ---
+        _buildClientDetailRow('Email', client.email ?? 'N/A', labelStyle, dataStyle),
+      ],
+    ),
+  );
+}
+
+// --- Widget Utilitaire pour les lignes de détails (Label : Data) ---
+pw.Widget _buildClientDetailRow(
+    String label, String data, pw.TextStyle labelStyle, pw.TextStyle dataStyle) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(top: 2),
+    child: pw.RichText(
+      text: pw.TextSpan(
+        // Le label (ex: "Adresse :")
+        text: '$label : ',
+        style: labelStyle,
+        children: [
+          // La donnée réelle (ex: "Rue Mahbouba...")
+          pw.TextSpan(
+            text: data,
+            style: dataStyle,
+          ),
+        ],
+      ),
+    ),
+  );
+}
 pw.Widget _buildPdfText(String text, pw.TextStyle style) {
   return pw.Text(text, style: style);
 }
@@ -145,20 +222,20 @@ pw.Widget _buildPdfHeaderRow(String label, String value, pw.TextStyle style) {
   );
 }
 
-pw.Widget _buildPdfTotalRow(String label, double amount, NumberFormat format, pw.TextStyle style) {
+pw.Widget _buildPdfTotalRow(String label, String amount, NumberFormat format, pw.TextStyle style) {
   return pw.Row(
     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
     children: [
       pw.Text(label, style: style),
-      pw.Text(format.format(amount), style: style),
+      pw.Text(amount, style: style),
     ],
   );
 }
 
 PdfColor _getPdfStatusColor(String status) {
   switch (status) {
-    case 'Payée': return PdfColors.green700;
-    case 'Émise': return PdfColors.blue700;
+    case 'payée': return PdfColors.green700;
+    case 'non payée': return PdfColors.blue700;
     case 'Retard': return PdfColors.red700;
     default: return PdfColors.orange700;
   }
@@ -183,7 +260,7 @@ pw.Widget _buildPdfArticlesTable(
         article.description,
         '${article.quantite}', // S'assurer que c'est une chaîne
         currencyFormat.format(article.prixUnitaire),
-        currencyFormat.format(article.prixTotal),
+      currencyFormat.format(article.prixUnitaire! * article.quantite! ),
       ]).toList(),
       border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
       headerStyle: tableHeaderStyle,

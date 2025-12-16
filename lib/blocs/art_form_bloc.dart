@@ -23,7 +23,7 @@ class ArticleFormBloc extends FormBloc<String, String> {
 
   Article get articleData {
     final qte = int.tryParse(quantite.value) ?? 0;
-    final prix = double.tryParse(prixUnitaire.value) ?? 0.0;
+    final prix = int.tryParse(prixUnitaire.value) ?? 0;
 
     return Article(
       description: description.value,

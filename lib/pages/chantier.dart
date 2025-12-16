@@ -148,6 +148,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
 
           isLoading ? Loader() : chantiers.isNotEmpty ? SizedBox(
             width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.7,
             child: Scrollbar(
                 controller: scrollController,
                 thumbVisibility: true,
