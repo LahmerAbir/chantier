@@ -169,7 +169,7 @@ class ChantierApi {
         "nom": nom,
         "matricule": matricule,
         "capacite": capacite,
-        "cout_journalier":cout_journalier,
+        "cout_journalier":100,
         "status": "disponible"
       }).catchError((
           onError,

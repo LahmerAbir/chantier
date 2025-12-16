@@ -1,10 +1,13 @@
 import 'package:chantier/model/homme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
+import '../blocs/camion_form_bloc.dart';
 import '../model/simple_entity.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
+import '../ui/common/loading_dialog.dart';
 import 'entity_add.dart';
 
 class CamionManagementScreen extends StatefulWidget {
@@ -27,67 +30,70 @@ class _EntityManagementScreenState extends State<CamionManagementScreen> {
   List<Materiel> matriels = [];
   bool isLoading = true;
 
-
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (widget.entityName == 'Matériel') {
           matriels = await ChantierRepository().getMateriel() ?? [];
-        }
-       else if (widget.entityName == 'Camion') {
+        } else if (widget.entityName == 'Camion') {
           camions = await ChantierRepository().getCamions() ?? [];
-        }
-        else {
+        } else {
           hommes = await ChantierRepository().getHommes() ?? [];
         }
         setState(() {
           isLoading = false;
         });
-      }catch(e){
+      } catch (e) {
         setState(() {
           isLoading = false;
         });
         print("exception list chantier $e");
       }
-    }
-    );
+    });
 
-
-      super.initState();
+    super.initState();
   }
 
-  void _openAddModal() async {
-    final newEntity =  widget.entityName == 'Matériel' ? await showDialog<Materiel>(
-      context: context,
-      builder: (context) => AddSimpleEntityModal(entityName: widget.entityName),
-    ) : widget.entityName == 'Camion'  ?
-    await  showDialog<Camion>(
-      context: context,
-      builder: (context) => AddSimpleEntityModal(entityName: widget.entityName),
-    ) : await showDialog<Homme>(
-      context: context,
-      builder: (context) => AddSimpleEntityModal(entityName: widget.entityName),
-    );
+  void _showAddCamionModal(BuildContext context) async {
+    final result = await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const CamionForm()));
 
-    if (newEntity != null) {
-      setState(() {
-        widget.entityName == 'Matériel' ? matriels.add(newEntity as Materiel) : widget.entityName == 'Camion'  ?
-        camions.add(newEntity as Camion) :
-        hommes.add(newEntity as Homme);
-      });
+    if (result == true) {
+      {
+        try {
+          setState(() {
+            isLoading = true;
+          });
+          camions = await ChantierRepository().getCamions() ?? [];
+          setState(() {
+            isLoading = false;
+          });
+        } catch (e) {
+          setState(() {
+            isLoading = false;
+          });
+          print("exception list chantier $e");
+        }
+      }
     }
   }
 
   void _deleteEntity(int index) {
     setState(() {
-      widget.entityName == 'Matériel' ? matriels.removeAt(index) : widget.entityName == 'Camion'  ?
-      camions.removeAt(index) :
-      hommes.removeAt(index);
+      widget.entityName == 'Matériel'
+          ? matriels.removeAt(index)
+          : widget.entityName == 'Camion'
+          ? camions.removeAt(index)
+          : hommes.removeAt(index);
     });
   }
-  bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+
+  bool isMobile =
+      defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -109,62 +115,151 @@ class _EntityManagementScreenState extends State<CamionManagementScreen> {
                     color: Colors.blue.shade700,
                     size: 40,
                   ),
-                  onPressed: _openAddModal,
+                  onPressed: () {
+                    _showAddCamionModal(context);
+                  },
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            isLoading ? Loader() :   SizedBox(
-              width: MediaQuery.of(context).size.width * 0.9,
-              height: isMobile  ? MediaQuery.of(context).size.height *0.7 : MediaQuery.of(context).size.height *0.8 ,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: widget.entityName == 'Matériel' ? matriels.length : widget.entityName == 'Camion'  ?
-                camions.length :
-                hommes.length,
-                itemBuilder: (context, index) {
-                  final entity = widget.entityName == 'Matériel' ? matriels[index] : widget.entityName == 'Camion'  ?
-                  camions[index] :
-                  hommes[index] ;
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      title: Text(
-                        entity.nom ?? "",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text("ID: ${entity.id}"),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.edit,
-                              size: 20,
-                              color: Colors.grey,
+            isLoading
+                ? Loader()
+                : SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    height: isMobile
+                        ? MediaQuery.of(context).size.height * 0.7
+                        : MediaQuery.of(context).size.height * 0.8,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: widget.entityName == 'Matériel'
+                          ? matriels.length
+                          : widget.entityName == 'Camion'
+                          ? camions.length
+                          : hommes.length,
+                      itemBuilder: (context, index) {
+                        final entity = widget.entityName == 'Matériel'
+                            ? matriels[index]
+                            : widget.entityName == 'Camion'
+                            ? camions[index]
+                            : hommes[index];
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: ListTile(
+                            title: Text(
+                              entity.nom ?? "",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            onPressed: () {
-                              // TODO: Ouvrir un modal de modification
-                            },
-                          ),
-                          // Icône de suppression
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              size: 20,
-                              color: Colors.red,
+                            subtitle: Text("ID: ${entity.id}"),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    // TODO: Ouvrir un modal de modification
+                                  },
+                                ),
+                                // Icône de suppression
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    size: 20,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _deleteEntity(index),
+                                ),
+                              ],
                             ),
-                            onPressed: () => _deleteEntity(index),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class CamionForm extends StatelessWidget {
+  const CamionForm({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final formBloc = BlocProvider.of<CamionFormBloc>(context);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Ajouter un Nouveau Camion',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ),
+      body: FormBlocListener<CamionFormBloc, String, String>(
+        onSubmitting: (context, state) {
+          LoadingDialog.show(context);
+        },
+        onSuccess: (context, state) {
+          LoadingDialog.hide(context);
+
+          ScaffoldMessenger.of(context)
+            ..showSnackBar(SnackBar(content: Text(state.successResponse!)));
+          Navigator.of(context).pop(true);
+        },
+        onFailure: (context, state) {
+          LoadingDialog.hide(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
+          );
+        },
+
+        child: Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Divider(),
+
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.nom,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom (Obligatoire)',
+                  ),
+                ),
+
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.immatriculation,
+                  decoration: const InputDecoration(labelText: 'Matricule'),
+                ),
+
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.capaciteCharge,
+                  decoration: const InputDecoration(labelText: 'Capacité '),
+                  keyboardType: TextInputType.number,
+                ),
+
+                const SizedBox(height: 20),
+
+                ElevatedButton.icon(
+                  onPressed: formBloc.submit,
+                  icon: const Icon(Icons.local_shipping),
+                  label: const Text('Enregistrer le Camion'),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
         ),
       ),
     );

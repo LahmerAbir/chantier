@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:chantier/blocs/art_form_bloc.dart';
+import 'package:chantier/blocs/camion_form_bloc.dart';
+import 'package:chantier/blocs/client_form_bloc.dart';
 import 'package:chantier/blocs/document_form_bloc.dart';
+import 'package:chantier/blocs/homme_form_bloc.dart';
+import 'package:chantier/blocs/mat_form_bloc.dart';
 import 'package:chantier/repository/auth_repository.dart';
 import 'package:chantier/router/app_router.dart';
 import 'package:chantier/router/app_router_observer.dart';
@@ -68,9 +72,21 @@ class BatiProApp extends ConsumerWidget {
               BlocProvider<DocumentFormBloc>(
                   create: (BuildContext context) =>
                       DocumentFormBloc()),
+              BlocProvider<ClientFormBloc>(
+                  create: (BuildContext context) =>
+                      ClientFormBloc()),
               BlocProvider<ArticleFormBloc>(
                   create: (BuildContext context) =>
                       ArticleFormBloc()),
+              BlocProvider<MaterielFormBloc>(
+                  create: (BuildContext context) =>
+                      MaterielFormBloc()),
+              BlocProvider<CamionFormBloc>(
+                  create: (BuildContext context) =>
+                      CamionFormBloc()),
+              BlocProvider<HommeFormBloc>(
+                  create: (BuildContext context) =>
+                      HommeFormBloc()),
             ],
             child: ref.watch(repositoryInitializerProvider).when(
                 error: (error, _) => Container(),

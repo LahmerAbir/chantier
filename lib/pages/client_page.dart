@@ -6,6 +6,7 @@ import '../blocs/client_form_bloc.dart';
 import '../model/client.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
+import '../ui/common/loading_dialog.dart';
 
 
 
@@ -39,8 +40,35 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
     });
   }
 
+  void _showAddClientModal(BuildContext context) async {
 
-  void _showAddClientModal() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const _ClientForm(),
+      ),
+    );
+
+    if (result == true) {
+      {
+        try {
+          setState(() {
+            _isLoading = true;
+          });
+          clients = await ChantierRepository().getClients() ?? [];
+          setState(() {
+            _isLoading = false;
+          });
+        } catch (e) {
+          setState(() {
+            _isLoading = false;
+          });
+          print("exception list chantier $e");
+        }
+      }
+
+    }
+  }
+ /* void _showAddClientModal() async {
     // Utiliser showModalBottomSheet pour une meilleure gestion du clavier
     final result = await showModalBottomSheet(
       context: context,
@@ -53,7 +81,7 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
       },
     );
 
-  }
+  }*/
 
   final ScrollController scrollController = ScrollController();
   bool isMobile =
@@ -80,7 +108,7 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                   color: Colors.blue.shade700,
                   size: 40,
                 ),
-                onPressed: _showAddClientModal,
+                onPressed:(){ _showAddClientModal(context);}
               ),
             ],
           ),
@@ -91,15 +119,7 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
               : clients.isNotEmpty
               ? SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
-                  child: Scrollbar(
-                    controller: scrollController,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      scrollDirection: isMobile
-                          ? Axis.horizontal
-                          : Axis.vertical,
-                      controller: scrollController,
-                      child: SingleChildScrollView(
+                  child:   SingleChildScrollView(
                         child: Column(
                           children: [
                             Card(
@@ -109,14 +129,20 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                               ),
                               child: SizedBox(
                                 width: MediaQuery.of(context).size.width * 0.9,
-                                child: _buildClientsDataTable(),
+                                child: Scrollbar(
+                                  controller: scrollController,
+                                  thumbVisibility: true,
+                                  child: SingleChildScrollView(
+                                    scrollDirection: isMobile
+                                        ? Axis.horizontal
+                                        : Axis.vertical,
+                                    controller: scrollController,
+                                    child: _buildClientsDataTable(),
                               ),
-                            ),
+                                ))),
                           ],
                         ),
                       ),
-                    ),
-                  ),
                 )
               : Text("Liste est vide"),
         ],
@@ -184,92 +210,97 @@ class _ClientForm extends StatelessWidget {
     final formBloc = BlocProvider.of<ClientFormBloc>(context);
 
     // Utiliser FormBlocListener pour gérer le succès/échec
-    return FormBlocListener<ClientFormBloc, int, String>(
-      onSubmitting: (context, state) {
-        // Afficher une barre de progression ou un Spinner
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Soumission en cours...')));
-      },
-      onSuccess: (context, state) {
-        // En cas de succès, fermer la modale et renvoyer 'true' pour rafraîchir la liste
-        Navigator.of(context).pop(true);
-      },
-      onFailure: (context, state) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
-        );
-      },
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title:    Text(
+          'Ajouter un Nouveau Client',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Ajouter un Nouveau Client',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const Divider(),
+      ),
+      body: FormBlocListener<ClientFormBloc, String, String>(
+        onSubmitting: (context, state) {
+          LoadingDialog.show(context);
+      
+        },
+        onSuccess: (context, state) {
+          LoadingDialog.hide(context);
+      
+          ScaffoldMessenger.of(context)..showSnackBar(
+            SnackBar(content: Text(state.successResponse!)),
+          );
+          Navigator.of(context).pop(true);
+        },
+        onFailure: (context, state) {
+          LoadingDialog.hide(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
-            // --- Champ Nom ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.nom,
-              decoration: const InputDecoration(labelText: 'Nom (Obligatoire)'),
-            ),
 
-            // --- Champ Email ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.email,
-              decoration: const InputDecoration(
-                labelText: 'Email (Obligatoire)',
-              ),
-            ),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.nom,
+                  decoration: const InputDecoration(labelText: 'Nom (Obligatoire)'),
+                ),
 
-            // --- Champ Téléphone ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.telephone,
-              decoration: const InputDecoration(labelText: 'Téléphone'),
-            ),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.email,
+                  decoration: const InputDecoration(
+                    labelText: 'Email (Obligatoire)',
+                  ),
+                ),
 
-            // --- Champ Adresse ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.adresse,
-              decoration: const InputDecoration(labelText: 'Adresse'),
-            ),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.telephone,
+                  decoration: const InputDecoration(labelText: 'Téléphone'),
+                ),
 
-            // --- Champ Ville ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.ville,
-              decoration: const InputDecoration(labelText: 'Ville'),
-            ),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.adresse,
+                  decoration: const InputDecoration(labelText: 'Adresse'),
+                ),
 
-            // --- Champ Pays ---
-            TextFieldBlocBuilder(
-              textFieldBloc: formBloc.pays,
-              decoration: const InputDecoration(labelText: 'Pays'),
-            ),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.ville,
+                  decoration: const InputDecoration(labelText: 'Ville'),
+                ),
 
-            const SizedBox(height: 20),
+                TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.pays,
+                  decoration: const InputDecoration(labelText: 'Pays'),
+                ),
 
-            // --- Bouton Soumettre ---
-            ElevatedButton.icon(
-              onPressed: formBloc.submit,
-              icon: const Icon(Icons.save),
-              label: const Text('Enregistrer le Client'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: formBloc.submit,
+                    // Utilise la fonction submit du FormBloc
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Enregistrer",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
             ),
-            const SizedBox(height: 10),
-          ],
+          ),
         ),
       ),
     );
