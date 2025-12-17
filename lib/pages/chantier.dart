@@ -19,7 +19,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
   List<Chantier> chantiers = [];
   final ScrollController scrollController = ScrollController();
 
-  bool isLoading = true ;
+  bool isLoading = true;
 
   @override
   initState() {
@@ -31,21 +31,18 @@ class _ChantiersPageState extends State<ChantiersPage> {
         setState(() {
           isLoading = false;
         });
-      }catch(e){
+      } catch (e) {
         setState(() {
           isLoading = false;
         });
         print("exception list chantier $e");
       }
-    }
-    );
-
+    });
   }
 
   Future<void> _loadChantiers() async {
     setState(() {
       isLoading = true;
-
     });
 
     try {
@@ -53,7 +50,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
       setState(() {
         isLoading = false;
       });
-    }catch(e){
+    } catch (e) {
       setState(() {
         isLoading = false;
       });
@@ -62,24 +59,21 @@ class _ChantiersPageState extends State<ChantiersPage> {
   }
 
   void _navigateToAddChantier(BuildContext context) async {
-
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const NewProjectDragDropScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const NewProjectDragDropScreen()),
     );
 
     if (result == true) {
       await _loadChantiers();
-
-
     }
   }
+
   @override
   void dispose() {
     scrollController.dispose();
     super.dispose();
   }
+
   void _openAddProjectModal() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const NewProjectDragDropScreen()),
@@ -138,7 +132,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                   color: Colors.blue.shade700,
                   size: 40,
                 ),
-                onPressed:(){
+                onPressed: () {
                   _navigateToAddChantier(context);
                 },
               ),
@@ -146,164 +140,175 @@ class _ChantiersPageState extends State<ChantiersPage> {
           ),
           const SizedBox(height: 20),
 
-          isLoading ? Loader() : chantiers.isNotEmpty ? SizedBox(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: Scrollbar(
-                controller: scrollController,
-                thumbVisibility: true,
-                 child :
-                SingleChildScrollView(
-                    scrollDirection: isMobile ? Axis.horizontal :Axis.vertical ,
+          isLoading
+              ? Loader()
+              : chantiers.isNotEmpty
+              ? SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: Scrollbar(
                     controller: scrollController,
+                    thumbVisibility: true,
                     child: SingleChildScrollView(
-                      child: isMobile
-                          ? CardMobile()
-                          : Card(
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DataTable(
-                                columnSpacing: 30,
-                                horizontalMargin: 15,
-                                dataRowMinHeight: 50,
-                                dataRowMaxHeight: 60,
+                      scrollDirection: isMobile
+                          ? Axis.horizontal
+                          : Axis.vertical,
+                      controller: scrollController,
+                      child: SingleChildScrollView(
+                        child: isMobile
+                            ? CardMobile()
+                            : Card(
+                                elevation: 1,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: DataTable(
+                                  columnSpacing: 30,
+                                  horizontalMargin: 15,
+                                  dataRowMinHeight: 50,
+                                  dataRowMaxHeight: 60,
 
-                                columns: const [
-                                  DataColumn(
-                                    label: Text(
-                                      'Chantier',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Client',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Budget',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Statut',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Date de livraison',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Actions',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-
-                                // Lignes de données
-                                rows: chantiers.map((chantier) {
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(
-                                        Text(
-                                          chantier.nom ?? "",
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                  columns: const [
+                                    DataColumn(
+                                      label: Text(
+                                        'Chantier',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      DataCell(Text(chantier.owner ??  "")),
-                                      DataCell(Text(Utils.formatNumber(chantier.total ?? 0))),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _getStatusColor(
-                                              chantier.status ?? "",
-                                            ).withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Client',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Budget',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Statut',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Date de livraison',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Actions',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+
+                                  // Lignes de données
+                                  rows: chantiers.map((chantier) {
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Text(
+                                            chantier.nom ?? "",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                          child: Text(
-                                            chantier.status ?? "",
-                                            style: TextStyle(
+                                        ),
+                                        DataCell(Text(chantier.owner ?? "")),
+                                        DataCell(
+                                          Text(
+                                            Utils.formatNumber(
+                                              chantier.total ?? 0,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color: _getStatusColor(
                                                 chantier.status ?? "",
+                                              ).withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              chantier.status ?? "",
+                                              style: TextStyle(
+                                                color: _getStatusColor(
+                                                  chantier.status ?? "",
+                                                ),
+                                                fontSize: 12,
                                               ),
-                                              fontSize: 12,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      DataCell(
-                                        Row(
-                                          children: [
-                                            Text(
-                                              "${(chantier.dateEmission).toString()}",
-                                            ),
-                                            const SizedBox(width: 5),
-                                          ],
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Row(
-                                          children: [
-                                            IconButton(
-                                              icon: Icon(
-                                                Icons.edit,
-                                                color: Colors.blue.shade700,
-                                                size: 20,
+                                        DataCell(
+                                          Row(
+                                            children: [
+                                              Text(
+                                                "${(chantier.dateEmission).toString()}",
                                               ),
-                                              onPressed: () =>
-                                                  _editChantier(chantier),
-                                              tooltip: 'Modifier',
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                color: Colors.red,
-                                                size: 20,
-                                              ),
-                                              onPressed: () =>
-                                                  _deleteChantier(chantier),
-                                              tooltip: 'Supprimer',
-                                            ),
-                                          ],
+                                              const SizedBox(width: 5),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
+                                        DataCell(
+                                          Row(
+                                            children: [
+                                              IconButton(
+                                                icon: Icon(
+                                                  Icons.edit,
+                                                  color: Colors.blue.shade700,
+                                                  size: 20,
+                                                ),
+                                                onPressed: () =>
+                                                    _editChantier(chantier),
+                                                tooltip: 'Modifier',
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                  size: 20,
+                                                ),
+                                                onPressed: () =>
+                                                    _deleteChantier(chantier),
+                                                tooltip: 'Supprimer',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
-          ),) : Center(child: Text("Liste est vide"))
+                )
+              : Center(child: Text("Liste est vide")),
         ],
       ),
     );
@@ -396,7 +401,9 @@ class _ChantiersPageState extends State<ChantiersPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(chantier.status ?? "").withOpacity(0.1),
+                    color: _getStatusColor(
+                      chantier.status ?? "",
+                    ).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
