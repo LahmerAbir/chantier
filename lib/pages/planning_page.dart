@@ -73,7 +73,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
               ? SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
                   height: isMobile
-                      ? MediaQuery.of(context).size.height * 0.6
+                      ? MediaQuery.of(context).size.height * 0.65
                       : MediaQuery.of(context).size.height * 0.8,
 
                   child: Scrollbar(
@@ -357,7 +357,6 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
       ),
     );
   }
-
   Future<void> generateAndPrintPlanningPdf(
       Chantier chantier, {
         required String updatedDescription,
@@ -365,9 +364,22 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
       }) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd/MM/yyyy');
-
     final String dateAujourdhui = dateFormat.format(DateTime.now());
     final String dateDemain = dateFormat.format(DateTime.now().add(const Duration(days: 1)));
+
+    // --- Widget pour créer un Badge Horizontal ---
+    pw.Widget _buildResourceBadge(String text, PdfColor color) {
+      return pw.Container(
+        margin: const pw.EdgeInsets.only(right: 4, bottom: 4),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.grey100, // Fond gris très clair
+          borderRadius: pw.BorderRadius.circular(3),
+          border: pw.Border.all(color: color, width: 0.5),
+        ),
+        child: pw.Text(text, style: pw.TextStyle(fontSize: 11, color: color)),
+      );
+    }
 
     pdf.addPage(
       pw.Page(
@@ -376,41 +388,60 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Titre
               pw.Header(level: 0, child: pw.Text('PLANNING DE TRAVAIL DU $dateAujourdhui')),
 
               pw.Text('Chantier : ${chantier.nom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 15),
 
-              // Description
+              // --- Section des Ressources Horizontales ---
+              pw.Text('RESSOURCES :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              pw.SizedBox(height: 8),
+
+              // 1. Hommes (Bleu)
+              if(chantierSing!.data!.ouvriers != null)
+                if (chantierSing!.data!.ouvriers!.isNotEmpty) ...[
+                pw.Text("Hommes :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  children: chantierSing!.data!.ouvriers!.map((h) => _buildResourceBadge("${h.prenom} ${h.nom}", PdfColors.blue800)).toList(),
+                ),
+                pw.SizedBox(height: 10),
+              ],
+
+              // 2. Camions (Vert)
+              if(chantierSing!.data!.camions != null)
+                if (chantierSing!.data!.camions!.isNotEmpty) ...[
+                pw.Text("Camions :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  children: chantierSing!.data!.camions!.map((c) => _buildResourceBadge("${c.nom} (${c.matricule})", PdfColors.green800)).toList(),
+                ),
+                pw.SizedBox(height: 10),
+              ],
+
+              // 3. Machines (Orange)
+              if(chantierSing!.data!.machines != null)
+                if (chantierSing!.data!.machines!.isNotEmpty) ...[
+                pw.Text("Matériel :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                pw.SizedBox(height: 4),
+                pw.Wrap(
+                  children: chantierSing!.data!.machines!.map((m) => _buildResourceBadge("${m.nom}", PdfColors.orange800)).toList(),
+                ),
+              ],
+
+              pw.SizedBox(height: 25),
+              pw.Divider(),
+
+              // Description et Planning du lendemain (vos mots gardés)
               pw.Text('Description du projet :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.Text(updatedDescription),
 
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 25),
 
-              // --- NOUVEAU : AFFICHAGE DES RESSOURCES DANS LE PDF ---
-              pw.Text('RESSOURCES :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-              pw.Divider(thickness: 1),
-
-              if(chantierSing!.data!.ouvriers != null)
-              if (chantierSing!.data!.ouvriers!.isNotEmpty)
-                pw.Bullet(text: 'Équipe : ' + chantierSing!.data!.ouvriers!.map((h) => '${h.prenom} ${h.nom}').join(', ')),
-
-              if(chantierSing!.data!.camions != null)
-                if (chantierSing!.data!.camions!.isNotEmpty)
-                pw.Bullet(text: 'Camions : ' + chantierSing!.data!.camions!.map((c) => '${c.nom} (${c.matricule})').join(', ')),
-
-              if(chantierSing!.data!.machines != null)
-                if (chantierSing!.data!.machines!.isNotEmpty)
-                pw.Bullet(text: 'Matériel : ' + chantierSing!.data!.machines!.map((m) => '${m.nom}').join(', ')),
-
-              pw.SizedBox(height: 30),
-
-              // Bloc Planning du Lendemain
               pw.Container(
                   padding: const pw.EdgeInsets.all(10),
                   decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.red, width: 2),
+                      border: pw.Border.all(color: PdfColors.red, width: 1.5),
                       borderRadius: pw.BorderRadius.circular(5)
                   ),
                   child: pw.Column(
@@ -418,29 +449,21 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
                       children: [
                         pw.Text('PLANNING DU LENDEMAIN ($dateDemain) :',
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red)),
-                        pw.Divider(color: PdfColors.red),
                         pw.SizedBox(height: 5),
                         pw.Text(remarque.isEmpty ? "Aucune remarque particulière." : remarque),
                       ]
                   )
               ),
-
-              pw.Spacer(),
-              pw.Align(
-                alignment: pw.Alignment.centerRight,
-                child: pw.Text('Document généré le $dateAujourdhui', style: const pw.TextStyle(fontSize: 9)),
-              )
             ],
           );
         },
       ),
     );
 
-    await Printing.layoutPdf(
-        onLayout: (format) async => pdf.save(),
-        name: 'Planning_${chantier.nom}_$dateAujourdhui.pdf'
-    );
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
+
+
 
 
 
