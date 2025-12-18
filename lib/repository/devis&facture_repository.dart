@@ -55,6 +55,41 @@ class FactureRepository {
       return null;
     }
   }
+  Future<bool?> editFacture({
+    String? reference,
+    int? id,
+    String? date,
+    int? client_id,
+    int? total_ht,
+    int? total_ttc,
+    int? montant_paye,
+    String? status,
+    String? notes,
+    List<Article>? articles
+  }) async {
+    try {
+      final resp = await factureApi.editFactures(
+        id : id ,
+        reference: reference,
+        date: date,
 
+        client_id: client_id,
+        total_ht: total_ht,
+        total_ttc: total_ttc,
+        montant_paye: montant_paye,
+        status: status,
+        notes: notes,
+        articles: articles,
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
 
 }

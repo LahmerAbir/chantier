@@ -22,6 +22,7 @@ class DocumentFormBloc extends FormBloc<String, String> {
     initialValue: DateTime.now(),
   );
 
+  int? factureId;
   final client = SelectFieldBloc<Client, dynamic>(
     validators: [FieldBlocValidators.required],
     initialValue: null,
@@ -44,17 +45,35 @@ class DocumentFormBloc extends FormBloc<String, String> {
     initialValue: [],
   );
 
-  // Champs calculés
   final totalTTC = TextFieldBloc(initialValue: '00 ',);
   final totalTTCAPayer = TextFieldBloc(initialValue: '00 ', );
 
-  // Map pour stocker les subscriptions et les annuler
   final Map<FormBloc, List<StreamSubscription>> _articleSubscriptions = {};
 
-  DocumentFormBloc() {
+  DocumentFormBloc({Facture? initialFacture , List<Client> availableClients = const []}): factureId = initialFacture?.id {
     addFieldBlocs(
       fieldBlocs: [type, date, client, status, articlesListState , notes],
     );
+    if (initialFacture != null) {
+      type.updateValue(initialFacture.reference!.contains("FAC") ? "Facture" : "Devis" ?? '');
+      notes.updateValue(initialFacture.notes?? "" );
+      status.updateValue(initialFacture.status ?? '');
+      if (initialFacture.clientId != null) {
+        try {
+          print('availableClients ${availableClients.length}');
+          final selectedClient = availableClients.firstWhere(
+                  (c) => c.id == initialFacture.clientId
+          );
+          client.updateValue(selectedClient);
+        } catch (e) {
+          print("Client non trouvé dans la liste");
+        }
+      }
+
+      if (initialFacture.date != null) {
+        date.updateValue(DateTime.parse(initialFacture.date!));
+      }
+    }
     _reconfigureArticleListeners();
   }
 
@@ -157,23 +176,46 @@ class DocumentFormBloc extends FormBloc<String, String> {
     bloc.articleData).toList();
     var dateD = Utils.convertDateTimeToSqlDateFormat(date.value ?? DateTime.now());
     try {
-      var ref = Utils.genererReference(type.value!.toLowerCase(), date.value!);
+      if(factureId != null )
+        {
+          var ref = Utils.genererReference(type.value!.toLowerCase(), date.value!);
 
-      var res = await FactureRepository().addFacture(
-        reference: ref,
-        date:dateD ,
-        client_id:client.value?.id ?? 1 ,
-        status: status.value,
+          var res = await FactureRepository().editFacture(
+            id:  factureId,
+            reference: ref,
+            date:dateD ,
+            client_id:client.value?.id ?? 1 ,
+            status: status.value,
 
-        notes: notes.value,
-        articles: finalArticles,);
-      if (res != null)
-        emitSuccess(
-          canSubmitAgain: true,
-          successResponse: ref,
-        );
-      else
-        emitFailure();
+            notes: notes.value,
+            articles: finalArticles,);
+          if (res != null)
+            emitSuccess(
+              canSubmitAgain: true,
+              successResponse: ref,
+            );
+          else
+            emitFailure();
+        }else {
+        var ref = Utils.genererReference(type.value!.toLowerCase(), date.value!);
+
+        var res = await FactureRepository().addFacture(
+          reference: ref,
+          date:dateD ,
+          client_id:client.value?.id ?? 1 ,
+          status: status.value,
+
+          notes: notes.value,
+          articles: finalArticles,);
+        if (res != null)
+          emitSuccess(
+            canSubmitAgain: true,
+            successResponse: ref,
+          );
+        else
+          emitFailure();
+      }
+
     } catch (e) {
       print("exception in addd facture $e");
       emitFailure();

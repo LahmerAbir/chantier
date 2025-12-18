@@ -10,6 +10,7 @@ import '../blocs/art_form_bloc.dart';
 import '../blocs/document_form_bloc.dart';
 import '../model/client.dart';
 import '../model/document.dart';
+import '../ui/common/loading_dialog.dart';
 import '../utils/utils.dart';
 
 class DocumentsPage extends StatefulWidget {
@@ -25,11 +26,37 @@ class _DocumentsPageState extends State<DocumentsPage> {
   void _openAddDocumentScreen() {
     Navigator.of(context)
         .push(
-          MaterialPageRoute(builder: (context) => const NewDocumentScreen()),
+          MaterialPageRoute(builder: (context) =>  NewDocumentScreen()),
         )
         .then((_) => setState(() {}));
   }
 
+  void _navigateToEdit(Facture facture) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NewDocumentScreen(factureToEdit: facture),
+      ),
+    );
+
+    if (result == true) {
+      setState(() {
+        isLoading = true;
+
+      });
+      try {
+        documents = await FactureRepository().getFactures() ?? [];
+        setState(() {
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list chantier $e");
+      } // Rafraîchir la liste après modification
+    }
+  }
   bool isLoading = true;
 
   @override
@@ -218,9 +245,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                               color: Colors.blue.shade700,
                                               size: 20,
                                             ),
-                                            onPressed: () => print(
-                                              "Modifier ${doc.reference}",
-                                            ),
+                                            onPressed: () => _navigateToEdit(doc),
                                             tooltip: 'Modifier',
                                           ),
                                           IconButton(
@@ -255,7 +280,8 @@ class _DocumentsPageState extends State<DocumentsPage> {
 }
 
 class NewDocumentScreen extends StatefulWidget {
-  const NewDocumentScreen({Key? key}) : super(key: key);
+   NewDocumentScreen({Key? key , this.factureToEdit}) : super(key: key);
+  final Facture? factureToEdit;
 
   @override
   State<NewDocumentScreen> createState() => _NewDocumentScreenState();
@@ -290,8 +316,8 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DocumentFormBloc(),
+    return isLoading ? Loader() :BlocProvider(
+      create: (context) => DocumentFormBloc(initialFacture: widget.factureToEdit , availableClients: clients ),
 
       child: Builder(
         builder: (context) {
@@ -306,49 +332,62 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
             ),
             body: FormBlocListener<DocumentFormBloc, String, String>(
               onSubmitting: (context, state) {
+                LoadingDialog.show(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Soumission en cours...')),
                 );
               },
               onDeleting: (context, state) {
+                LoadingDialog.hide(context);
                 setState(() {
                   print("set stateeee");
                 });
               },
               onSuccess: (context, state) {
+                LoadingDialog.hide(context);
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text(state.successResponse!)));
-                final List<Article> finalArticles = docFormBloc.articleBlocs
-                    .map((bloc) => bloc.articleData)
-                    .toList();
-                 int totalTTC = 0;
-                int totalHT = 0;
+                if(widget.factureToEdit != null)
+                  {
 
-                for(var e in finalArticles){
-                  totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
+                    ScaffoldMessenger.of(context)..showSnackBar(
+                      SnackBar(content: Text(state.successResponse!)),
+                    );
+                    Navigator.of(context).pop(true);
+                  }else {
+                  final List<Article> finalArticles = docFormBloc.articleBlocs
+                      .map((bloc) => bloc.articleData)
+                      .toList();
+                  int totalTTC = 0;
+                  int totalHT = 0;
+
+                  for (var e in finalArticles) {
+                    totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
+                  }
+                  totalTTC = totalHT;
+                  final Facture newDocument = Facture(
+                    client: docFormBloc.client.value,
+                    clientId: docFormBloc.client.value?.id ?? 1,
+                    reference: state.successResponse,
+                    date: docFormBloc.date.value.toString() ?? "",
+                    totalTtc: totalTTC,
+                    totalHt: totalHT,
+                    status: docFormBloc.status.value ?? "",
+                    articles: finalArticles, // Placeholder
+                  );
+
+                  // Ouvre la page d'aperçu PDF
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          PdfPreviewPage(document: newDocument),
+                    ),
+                  );
                 }
-                totalTTC = totalHT;
-                final Facture newDocument = Facture(
-                  client: docFormBloc.client.value,
-                  clientId: docFormBloc.client.value?.id ?? 1,
-                  reference: state.successResponse,
-                  date: docFormBloc.date.value.toString() ?? "",
-                  totalTtc: totalTTC,
-                  totalHt: totalHT,
-                  status: docFormBloc.status.value ?? "",
-                  articles: finalArticles, // Placeholder
-                );
-
-                // Ouvre la page d'aperçu PDF
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => PdfPreviewPage(document: newDocument),
-                  ),
-                );
-
               },
               onFailure: (context, state) {
+                LoadingDialog.hide(context);
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text(state.failureResponse!)));

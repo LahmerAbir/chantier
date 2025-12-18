@@ -1,4 +1,5 @@
 import 'package:chantier/model/chantier.dart';
+import 'package:chantier/model/chantier_single.dart';
 import 'package:chantier/model/homme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,6 +29,23 @@ class ChantierRepository {
       return null;
     }
   }
+
+  Future<ChantierSingle?> getChantiersById(int? id) async {
+    try {
+      final resp = await chantierApi.getChantierById(id);
+      if (resp != null) {
+        var response = ChantierSingle.fromJson(resp.data);
+        final ChantierSingle list = response;
+        return list;
+
+      }
+      return null;
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
   Future<List<Client>?> getClients() async {
     try {
       final resp = await chantierApi.getClients();
@@ -142,21 +160,69 @@ class ChantierRepository {
   Future<bool?> addChantiers({
     String? nom,
     String? owner,
+    String? description,
     String? adresse,
     String? date_emission,
     String? dateecheeance,
     int? total,
     String? status,
+    List<int>? ouvrier_ids,
+    List<int>? machine_ids,
+    List<int>? camion_ids,
   }) async {
     try {
       final resp = await chantierApi.addChantier(
         nom: nom,
         owner: owner,
+        description: description,
         adresse: adresse,
         date_emission: date_emission,
         dateecheeance: dateecheeance,
         total: total,
         status: status,
+        ouvrier_ids: ouvrier_ids,
+        machine_ids: machine_ids,
+        camion_ids: camion_ids,
+      );
+      if (resp != null) {
+        return true;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("exceeeppttion chantier $e");
+      return null;
+    }
+  }
+
+  Future<bool?> editChantiers({
+    int? id,
+    String? nom,
+    String? owner,
+    String? adresse,
+    String? description,
+    String? date_emission,
+    String? dateecheeance,
+    int? total,
+    String? status,
+    List<int>? ouvrier_ids,
+    List<int>? machine_ids,
+    List<int>? camion_ids,
+  }) async {
+    try {
+      final resp = await chantierApi.editChantier(
+        id : id ,
+        nom: nom,
+        owner: owner,
+        description: description,
+        adresse: adresse,
+        date_emission: date_emission,
+        dateecheeance: dateecheeance,
+        total: total,
+        status: status,
+        ouvrier_ids: ouvrier_ids,
+        machine_ids: machine_ids,
+        camion_ids: camion_ids,
       );
       if (resp != null) {
         return true;

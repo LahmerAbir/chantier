@@ -1,4 +1,5 @@
 import 'package:chantier/pages/client_page.dart';
+import 'package:chantier/pages/planning_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,7 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _pages = [
     const DashboardPage(),
     const ChantiersPage(),
+    const PlanningScreen(),
     const DocumentsPage(),
     ClientManagementScreen(),// Devis & Factures
     const MatManagementScreen(
@@ -170,43 +172,50 @@ class NavigationSideBar extends StatelessWidget {
             onTap: () => onDestinationSelected(1),
           ),
           _NavItem(
-            icon: Icons.receipt_long_outlined,
-            label: "Devis & Factures",
+            icon: Icons.list_alt,
+            label: "Planning",
             index: 2,
             isSelected: selectedIndex == 2,
             onTap: () => onDestinationSelected(2),
           ),
           _NavItem(
-            icon: Icons.perm_contact_cal_rounded,
-            label: "Clients",
+            icon: Icons.receipt_long_outlined,
+            label: "Devis & Factures",
             index: 3,
             isSelected: selectedIndex == 3,
             onTap: () => onDestinationSelected(3),
           ),
           _NavItem(
-            icon: Icons.handyman_outlined,
-            label: "Matériel",
+            icon: Icons.perm_contact_cal_rounded,
+            label: "Clients",
             index: 4,
             isSelected: selectedIndex == 4,
             onTap: () => onDestinationSelected(4),
+          ),
+          _NavItem(
+            icon: Icons.handyman_outlined,
+            label: "Matériel",
+            index: 5,
+            isSelected: selectedIndex == 5,
+            onTap: () => onDestinationSelected(5),
           ),
           // Autres items simulés
           _NavItem(
             icon: Icons.person,
             label: "Hommes",
-            index: 5,
-            isSelected: selectedIndex == 5,
+            index: 6,
+            isSelected: selectedIndex == 6,
             onTap: () {
-              onDestinationSelected(5);
+              onDestinationSelected(6);
             },
           ),
           _NavItem(
             icon: Icons.emoji_transportation,
             label: "Camions",
-            index: 6,
-            isSelected: selectedIndex == 6,
+            index: 7,
+            isSelected: selectedIndex == 7,
             onTap: () {
-              onDestinationSelected(6);
+              onDestinationSelected(7);
             },
           ),
         ],

@@ -1,28 +1,26 @@
-
 import 'package:chantier/repository/chantier_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../model/chantier.dart';
 import '../model/client.dart';
 import '../model/homme.dart';
 import '../utils/utils.dart';
 
 class ChantierFormBloc extends FormBloc<String, String> {
   final nomChantier = TextFieldBloc(validators: [FieldBlocValidators.required]);
+  final description = TextFieldBloc();
   final client = SelectFieldBloc<Client, dynamic>(
     validators: [FieldBlocValidators.required],
     initialValue: null,
     items: const [],
   );
   final budget = TextFieldBloc(
-    validators: [
-      FieldBlocValidators.required,
-      _validateBudget,
-    ],
+    validators: [FieldBlocValidators.required, _validateBudget],
   );
 
-  // 2. Champ Status (Dropdown)
+  final int? chantierId;
   final status = SelectFieldBloc<String, dynamic>(
     validators: [FieldBlocValidators.required],
     items: ['en cours', 'terminé', 'en attente'],
@@ -46,13 +44,20 @@ class ChantierFormBloc extends FormBloc<String, String> {
   final ressourcesAssigned = InputFieldBloc<List<RessourceBase>, dynamic>(
     initialValue: [],
   );
+  List<Homme> hommes = [];
+  List<Materiel> materiels = [];
+  List<Camion> camions = [];
 
-  ChantierFormBloc() {
+  ChantierFormBloc({
+    Chantier? initialChantier,
+    List<Client> availableClients = const [],
+  }) : chantierId = initialChantier?.id {
     addFieldBlocs(
       fieldBlocs: [
         nomChantier,
         client,
         budget,
+        description,
         status,
         dateDebut,
         dateFin,
@@ -61,6 +66,28 @@ class ChantierFormBloc extends FormBloc<String, String> {
         ressourcesAssigned,
       ],
     );
+    if (initialChantier != null) {
+      nomChantier.updateValue(initialChantier.nom ?? '');
+      budget.updateValue(initialChantier.total.toString());
+      description.updateValue(initialChantier.description ?? "");
+      status.updateValue(initialChantier.status ?? '');
+      if (initialChantier.clientId != null) {
+        try {
+          print('availableClients ${availableClients.length}');
+          final selectedClient = availableClients.firstWhere(
+            (c) => c.id == initialChantier.clientId,
+          );
+          client.updateValue(selectedClient);
+        } catch (e) {
+          print("Client non trouvé dans la liste");
+        }
+      }
+
+      if (initialChantier.dateEmission != null) {
+        dateDebut.updateValue(DateTime.parse(initialChantier.dateEmission!));
+        dateFin.updateValue(DateTime.parse(initialChantier.dateEcheance!));
+      }
+    }
   }
 
   static String? _validateBudget(String? budget) {
@@ -74,40 +101,69 @@ class ChantierFormBloc extends FormBloc<String, String> {
 
   @override
   void onSubmitting() async {
-    final assigned = hommesAssigned.value;
-    final assignedM = materielAssigned.value;
-
-    print('--- Soumission du Chantier ---');
-    print('Nom: ${nomChantier.value}');
-    print('Client: ${client.value}');
-    print('Statut: ${status.value}');
-    print('Budget: ${budget.value}');
-    print('Ressources assignées: ${assigned.map((r) => r.nom).join(', ')}');
-    var dateD = Utils.convertDateTimeToSqlDateFormat(dateDebut.value ?? DateTime.now());
-    var dateF = Utils.convertDateTimeToSqlDateFormat(dateDebut.value ?? DateTime.now());
+    var dateD = Utils.convertDateTimeToSqlDateFormat(
+      dateDebut.value ?? DateTime.now(),
+    );
+    var dateF = Utils.convertDateTimeToSqlDateFormat(
+      dateDebut.value ?? DateTime.now(),
+    );
+    final listHomme = ressourcesAssigned.value.whereType<Homme>().toList();
+    final listCamion = ressourcesAssigned.value.whereType<Camion>().toList();
+    final listMateriel = ressourcesAssigned.value
+        .whereType<Materiel>()
+        .toList();
+    final List<int> hommesIds = listHomme.map((h) => h.id!).toList();
+    final List<int> camionsIds = listCamion.map((c) => c.id!).toList();
+    final List<int> materielsIds = listMateriel.map((m) => m.id!).toList();
     try {
-      var res = await ChantierRepository().addChantiers(
-        nom: nomChantier.value,
-        owner: client.value?.nom ?? "",
-
-        adresse: nomChantier.value,
-        date_emission: dateD,
-        dateecheeance: dateF,
-        total: int.parse(budget.value),
-        status: status.value ,
-      );
-      if (res != null)
-        emitSuccess(
-          canSubmitAgain: true,
-          successResponse: 'Chantier ${nomChantier.value} créé avec succès.',
+      if (chantierId != null) {
+        var res = await ChantierRepository().editChantiers(
+          id: chantierId,
+          nom: nomChantier.value,
+          owner: client.value?.nom ?? "",
+          description: description.value ?? "",
+          adresse: nomChantier.value,
+          date_emission: dateD,
+          dateecheeance: dateF,
+          total: int.parse(budget.value),
+          status: status.value,
+          ouvrier_ids: hommesIds,
+          camion_ids: camionsIds,
+          machine_ids: materielsIds,
         );
-      else
-        emitFailure();
-    }catch(e)
-    {
+        if (res != null)
+          emitSuccess(
+            canSubmitAgain: true,
+            successResponse:
+                'Chantier ${nomChantier.value} modifié avec succès.',
+          );
+        else
+          emitFailure();
+      } else {
+        var res = await ChantierRepository().addChantiers(
+          nom: nomChantier.value,
+          owner: client.value?.nom ?? "",
+
+          adresse: nomChantier.value,
+          description: description.value,
+          date_emission: dateD,
+          dateecheeance: dateF,
+          total: int.parse(budget.value),
+          status: status.value,
+          ouvrier_ids: hommesIds,
+          camion_ids: camionsIds,
+          machine_ids: materielsIds,
+        );
+        if (res != null)
+          emitSuccess(
+            canSubmitAgain: true,
+            successResponse: 'Chantier ${nomChantier.value} créé avec succès.',
+          );
+        else
+          emitFailure();
+      }
+    } catch (e) {
       emitFailure();
-
     }
-
   }
 }

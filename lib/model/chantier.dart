@@ -1,3 +1,5 @@
+import 'homme.dart';
+
 class ChantierData {
   bool? success;
   List<Chantier>? data;
@@ -34,13 +36,16 @@ class Chantier {
   String? nom;
   String? owner;
   String? address;
+  String? description;
   String? dateEmission;
   String? dateEcheance;
   int? total;
   String? status;
   int? clientId;
   String? createdAt;
-
+  List<Homme>? ouvriers;
+  List<Camion>? camions;
+  List<Materiel>? machines;
   Chantier(
       {this.id,
         this.nom,
@@ -48,6 +53,9 @@ class Chantier {
         this.address,
         this.dateEmission,
         this.dateEcheance,
+        this.ouvriers ,
+        this.camions ,
+        this.machines ,
         this.total,
         this.status,
         this.clientId,
@@ -59,9 +67,19 @@ class Chantier {
     owner = json['owner'];
     address = json['address'];
     dateEmission = json['date_emission'];
+    description = json['description'];
     dateEcheance = json['date_echeance'];
     total = json['total'];
     status = json['status'];
+    ouvriers: (json['ouvriers'] as List?)
+        ?.map((i) => Homme.fromJson(i))
+        .toList() ?? [];
+    camions: (json['camions'] as List?)
+        ?.map((i) => Camion.fromJson(i))
+        .toList() ?? [];
+    machines: (json['machines'] as List?)
+        ?.map((i) => Materiel.fromJson(i))
+        .toList() ?? [];
     clientId = json['client_id'];
     createdAt = json['created_at'];
   }
@@ -71,6 +89,7 @@ class Chantier {
     data['id'] = this.id;
     data['nom'] = this.nom;
     data['owner'] = this.owner;
+    data['description'] = this.description;
     data['address'] = this.address;
     data['date_emission'] = this.dateEmission;
     data['date_echeance'] = this.dateEcheance;
@@ -78,6 +97,9 @@ class Chantier {
     data['status'] = this.status;
     data['client_id'] = this.clientId;
     data['created_at'] = this.createdAt;
+    data['ouvriers']= ouvriers?.map((i) => i.toJson()).toList();
+    data['camions']= camions?.map((i) => i.toJson()).toList();
+    data['machines']= machines?.map((i) => i.toJson()).toList();
     return data;
   }
 }

@@ -67,18 +67,25 @@ class _ChantiersPageState extends State<ChantiersPage> {
       await _loadChantiers();
     }
   }
+  void _navigateToEdit(Chantier chantier) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        // On passe le chantier à la page pour qu'elle le transmette au Bloc
+        builder: (context) => NewProjectDragDropScreen(chantierToEdit: chantier),
+      ),
+    );
 
+    if (result == true) {
+      _loadChantiers(); // Rafraîchir la liste après modification
+    }
+  }
   @override
   void dispose() {
     scrollController.dispose();
     super.dispose();
   }
 
-  void _openAddProjectModal() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const NewProjectDragDropScreen()),
-    );
-  }
 
   void _editChantier(Chantier chantier) {
     print("Modification de : ${chantier.nom}");
@@ -145,7 +152,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
               : chantiers.isNotEmpty
               ? SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
-                  height: MediaQuery.of(context).size.height * 0.6,
+                  height: isMobile ?  MediaQuery.of(context).size.height * 0.6 : MediaQuery.of(context).size.height * 0.8,
                   child: Scrollbar(
                     controller: scrollController,
                     thumbVisibility: true,
@@ -283,7 +290,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                                   size: 20,
                                                 ),
                                                 onPressed: () =>
-                                                    _editChantier(chantier),
+                                                    _navigateToEdit(chantier),
                                                 tooltip: 'Modifier',
                                               ),
                                               IconButton(
@@ -438,7 +445,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                         color: Colors.blue.shade700,
                         size: 20,
                       ),
-                      onPressed: () => _editChantier(chantier),
+                      onPressed: () => _navigateToEdit(chantier),
                       tooltip: 'Modifier',
                     ),
                     IconButton(

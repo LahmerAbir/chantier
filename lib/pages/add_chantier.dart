@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 import '../blocs/chantier_form_bloc.dart';
+import '../model/chantier.dart';
 import '../model/client.dart';
 import '../model/homme.dart';
 import '../repository/chantier_repository.dart';
@@ -16,8 +17,8 @@ import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
 
 class NewProjectDragDropScreen extends StatefulWidget {
-  const NewProjectDragDropScreen({super.key});
-
+  const NewProjectDragDropScreen({super.key , this.chantierToEdit});
+  final Chantier? chantierToEdit;
   @override
   State<NewProjectDragDropScreen> createState() =>
       _NewProjectDragDropScreenState();
@@ -91,14 +92,12 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
   @override
   Widget build(BuildContext context) {
     final assignedList = _getAllAssignedResources();
-    return BlocProvider(
-      create: (context) => ChantierFormBloc(),
+    return isLoading ? Loader() : BlocProvider(
+      create: (context) => ChantierFormBloc(initialChantier: widget.chantierToEdit , availableClients: clients),
       child: Builder(
         builder: (context) {
           final chantierFormBloc = BlocProvider.of<ChantierFormBloc>(context);
           chantierFormBloc.client.updateItems(clients);
-
-
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateAssignedResources(chantierFormBloc);
           });
@@ -106,7 +105,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
           return Scaffold(
             appBar: AppBar(
               title: Text(
-                "Créer un nouveau chantier",
+               widget.chantierToEdit != null ? "Modifier le Chantier" :  "Créer un nouveau chantier",
                 style: TextStyle(fontSize: isMobile ? 16 : 20),
               ),
               backgroundColor: Colors.white,
@@ -124,6 +123,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
                 );
                 Navigator.of(context).pop(true);
                 },
+
               onFailure: (context, state) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
@@ -208,6 +208,14 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          _buildTextField(
+                            chantierFormBloc.description,
+                            "Description",
+                            "",
+                            maxline: 3
                           ),
                           const SizedBox(height: 30),
 
@@ -424,6 +432,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
                       ),
                     ),
                   ),
+
 
                   if (!isMobile)
                     isLoading
@@ -692,6 +701,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
         }
       }
 
+
       _updateAssignedResources(ChantierFormBloc);
     });
   }
@@ -764,7 +774,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
     );
   }
 
-  Widget _buildTextField(TextFieldBloc bloc, String label, String hint) {
+  Widget _buildTextField(TextFieldBloc bloc, String label, String hint , {int maxline = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -772,6 +782,7 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
         TextFieldBlocBuilder(
           textFieldBloc: bloc,
           decoration: _inputDecoration(hintText: hint),
+          maxLines: maxline,
         ),
       ],
     );
