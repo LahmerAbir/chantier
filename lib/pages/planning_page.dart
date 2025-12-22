@@ -1,4 +1,5 @@
 import 'package:chantier/model/chantier_single.dart';
+import 'package:chantier/ui/common/loading_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_bloc/flutter_form_bloc.dart';
@@ -24,7 +25,6 @@ class _PlanningScreenState extends State<PlanningScreen> {
   bool isLoading = true;
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
-
 
   @override
   initState() {
@@ -167,6 +167,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                                             builder: (context) =>
                                                 PlanningEditPdfScreen(
                                                   chantier: chantier,
+                                                  listchantier: _chantiers,
                                                 ),
                                           ),
                                         );
@@ -187,14 +188,17 @@ class _PlanningScreenState extends State<PlanningScreen> {
       ),
     );
   }
-
-
 }
 
 class PlanningEditPdfScreen extends StatefulWidget {
   final Chantier chantier;
+  final List<Chantier> listchantier;
 
-  const PlanningEditPdfScreen({super.key, required this.chantier});
+  const PlanningEditPdfScreen({
+    super.key,
+    required this.chantier,
+    required this.listchantier,
+  });
 
   @override
   State<PlanningEditPdfScreen> createState() => _PlanningEditPdfScreenState();
@@ -202,7 +206,6 @@ class PlanningEditPdfScreen extends StatefulWidget {
 
 class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
   late TextEditingController _descriptionController;
-  late TextEditingController _remarqueController;
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
   ChantierSingle? chantierSing;
   bool isLoading = true;
@@ -213,11 +216,12 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
     _descriptionController = TextEditingController(
       text: widget.chantier.description,
     );
-    _remarqueController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        chantierSing = await ChantierRepository().getChantiersById(widget.chantier.id) ;
+        chantierSing = await ChantierRepository().getChantiersById(
+          widget.chantier.id,
+        );
         setState(() {
           isLoading = false;
         });
@@ -233,7 +237,6 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
-    _remarqueController.dispose();
     super.dispose();
   }
 
@@ -241,107 +244,147 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Préparation du Planning PDF')),
-      body: isLoading ? Loader() : SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- Informations Non-Éditables ---
-            _buildReadOnlyField('Nom du Chantier', widget.chantier.nom ?? ""),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildReadOnlyField(
-                    'Date Début',
-                    widget.chantier.dateEmission ?? "",
+      body: isLoading
+          ? Loader()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // --- Informations Non-Éditables ---
+                  _buildReadOnlyField(
+                    'Nom du Chantier',
+                    widget.chantier.nom ?? "",
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildReadOnlyField(
-                    'Date Fin',
-                    widget.chantier.dateEcheance ?? "",
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildReadOnlyField(
+                          'Date Début',
+                          widget.chantier.dateEmission ?? "",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildReadOnlyField(
+                          'Date Fin',
+                          widget.chantier.dateEcheance ?? "",
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
 
-            const Divider(height: 30),
+                  const Divider(height: 30),
 
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
 
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
+                  const SizedBox(height: 20),
+
+                  _buildResourceList(
+                    "Ouvriers affectés",
+                    chantierSing!.data!.ouvriers as List<Homme>,
+                    (h) => "${h.prenom} ${h.nom}",
+                  ),
+                  _buildResourceList(
+                    "Camions sur site",
+                    chantierSing!.data!.camions as List<Camion>,
+                    (c) => "${c.nom} - ${c.matricule}",
+                  ),
+                  _buildResourceList(
+                    "Machines / Matériel",
+                    chantierSing!.data!.machines as List<Materiel>,
+                    (m) => "${m.nom}",
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        LoadingDialog.show(context);
+
+                        List<ChantierSingle> listchantising = [];
+                        for(var c in widget.listchantier) {
+                          var chantierSin = await ChantierRepository().getChantiersById(
+                            c.id,
+                          );
+                          if(chantierSin != null)
+                            listchantising.add(chantierSin);
+                        }
+
+                       await  generateAndPrintPlanningPdf(
+                          widget.chantier,
+                          updatedDescription: _descriptionController.text,
+                           chantierSinglist: listchantising
+                        );
+                        LoadingDialog.hide(context);
+
+                      }, // Utilise la fonction submit du FormBloc
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Imprimer",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  // --- Bouton Impression ---
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            TextFormField(
-              controller: _remarqueController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Planning du lendemain / Remarques',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-            ),
-            _buildResourceList("Ouvriers affectés",chantierSing!.data!.ouvriers as List<Homme>, (h) => "${h.prenom} ${h.nom}"),
-            _buildResourceList("Camions sur site", chantierSing!.data!.camions as List<Camion>, (c) => "${c.nom} - ${c.matricule}"),
-            _buildResourceList("Machines / Matériel", chantierSing!.data!.machines as List<Materiel>, (m) => "${m.nom}"),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  generateAndPrintPlanningPdf(
-                    widget.chantier,
-                    updatedDescription: _descriptionController.text,
-                    remarque: _remarqueController.text,
-                  );
-                },                // Utilise la fonction submit du FormBloc
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  "Imprimer",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-            // --- Bouton Impression ---
-          ],
-        ),
-      ) ,
     );
   }
-  Widget _buildResourceList(String title, List<dynamic> items, String Function(dynamic) labelExtractor) {
+
+  Widget _buildResourceList(
+    String title,
+    List<dynamic> items,
+    String Function(dynamic) labelExtractor,
+  ) {
     if (items.isEmpty) return const SizedBox();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 15),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.blueGrey,
+          ),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: items.map((item) => Chip(
-            label: Text(labelExtractor(item), style: const TextStyle(fontSize: 12)),
-            backgroundColor: Colors.blue[50],
-          )).toList(),
+          children: items
+              .map(
+                (item) => Chip(
+                  label: Text(
+                    labelExtractor(item),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  backgroundColor: Colors.blue[50],
+                ),
+              )
+              .toList(),
         ),
       ],
     );
   }
+
   Widget _buildReadOnlyField(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -357,17 +400,21 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
       ),
     );
   }
+
   Future<void> generateAndPrintPlanningPdf(
-      Chantier chantier, {
-        required String updatedDescription,
-        required String remarque,
-      }) async {
+    Chantier chantier, {
+    required String updatedDescription,
+        required List<ChantierSingle> chantierSinglist
+  }) async {
+
+
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd/MM/yyyy');
     final String dateAujourdhui = dateFormat.format(DateTime.now());
-    final String dateDemain = dateFormat.format(DateTime.now().add(const Duration(days: 1)));
+    final String dateDemain = dateFormat.format(
+      DateTime.now().add(const Duration(days: 1)),
+    );
 
-    // --- Widget pour créer un Badge Horizontal ---
     pw.Widget _buildResourceBadge(String text, PdfColor color) {
       return pw.Container(
         margin: const pw.EdgeInsets.only(right: 4, bottom: 4),
@@ -382,89 +429,291 @@ class _PlanningEditPdfScreenState extends State<PlanningEditPdfScreen> {
     }
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
+
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return pw.Column(
+          return  [
+            pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Header(level: 0, child: pw.Text('PLANNING DE TRAVAIL DU $dateAujourdhui')),
+              pw.Header(
+                level: 0,
+                child: pw.Text('RAPPORT JOURNALIER $dateAujourdhui'),
+              ),
 
-              pw.Text('Chantier : ${chantier.nom}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-              pw.SizedBox(height: 15),
-
-              // --- Section des Ressources Horizontales ---
-              pw.Text('RESSOURCES :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              pw.Text(
+                'Chantier : ${chantier.nom}',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Text('Période : Du ${chantier.dateEmission} au ${chantier.dateEcheance}',
+                  style: const pw.TextStyle(color: PdfColors.grey700)),
+              if (chantierSing!.data!.ouvriers != null && chantierSing!.data!.camions != null &&
+              chantierSing!.data!.machines != null )
+                if (chantierSing!.data!.ouvriers!.isNotEmpty && chantierSing!.data!.camions!.isNotEmpty &&
+                    chantierSing!.data!.machines!.isNotEmpty ) pw.Text(
+                'RESSOURCES :',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
               pw.SizedBox(height: 8),
 
-              // 1. Hommes (Bleu)
-              if(chantierSing!.data!.ouvriers != null)
+              if (chantierSing!.data!.ouvriers != null)
                 if (chantierSing!.data!.ouvriers!.isNotEmpty) ...[
-                pw.Text("Hommes :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                pw.SizedBox(height: 4),
-                pw.Wrap(
-                  children: chantierSing!.data!.ouvriers!.map((h) => _buildResourceBadge("${h.prenom} ${h.nom}", PdfColors.blue800)).toList(),
-                ),
-                pw.SizedBox(height: 10),
-              ],
+                  pw.Text(
+                    "Hommes :",
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Wrap(
+                    children: chantierSing!.data!.ouvriers!
+                        .map(
+                          (h) => _buildResourceBadge(
+                            "${h.prenom} ${h.nom}",
+                            PdfColors.blue800,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  pw.SizedBox(height: 10),
+                ],
 
               // 2. Camions (Vert)
-              if(chantierSing!.data!.camions != null)
+              if (chantierSing!.data!.camions != null)
                 if (chantierSing!.data!.camions!.isNotEmpty) ...[
-                pw.Text("Camions :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                pw.SizedBox(height: 4),
-                pw.Wrap(
-                  children: chantierSing!.data!.camions!.map((c) => _buildResourceBadge("${c.nom} (${c.matricule})", PdfColors.green800)).toList(),
-                ),
-                pw.SizedBox(height: 10),
-              ],
+                  pw.Text(
+                    "Camions :",
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Wrap(
+                    children: chantierSing!.data!.camions!
+                        .map(
+                          (c) => _buildResourceBadge(
+                            "${c.nom} (${c.matricule})",
+                            PdfColors.green800,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  pw.SizedBox(height: 10),
+                ],
 
-              // 3. Machines (Orange)
-              if(chantierSing!.data!.machines != null)
+              if (chantierSing!.data!.machines != null)
                 if (chantierSing!.data!.machines!.isNotEmpty) ...[
-                pw.Text("Matériel :", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                pw.SizedBox(height: 4),
-                pw.Wrap(
-                  children: chantierSing!.data!.machines!.map((m) => _buildResourceBadge("${m.nom}", PdfColors.orange800)).toList(),
-                ),
-              ],
+                  pw.Text(
+                    "Matériel :",
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Wrap(
+                    children: chantierSing!.data!.machines!
+                        .map(
+                          (m) => _buildResourceBadge(
+                            "${m.nom}",
+                            PdfColors.orange800,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
 
-              pw.SizedBox(height: 25),
-              pw.Divider(),
-
-              // Description et Planning du lendemain (vos mots gardés)
-              pw.Text('Description du projet :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Text(updatedDescription),
-
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 5),
 
               pw.Container(
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.red, width: 1.5),
-                      borderRadius: pw.BorderRadius.circular(5)
-                  ),
-                  child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('PLANNING DU LENDEMAIN ($dateDemain) :',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red)),
-                        pw.SizedBox(height: 5),
-                        pw.Text(remarque.isEmpty ? "Aucune remarque particulière." : remarque),
-                      ]
-                  )
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.red, width: 1.5),
+                  borderRadius: pw.BorderRadius.circular(5),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Remarque  :',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.red,
+                      ),
+                    ),
+                    pw.SizedBox(height: 5),
+                    pw.Text(
+                      updatedDescription.isEmpty
+                          ? "Aucune remarque particulière."
+                          : updatedDescription,
+                    ),
+                  ],
+                ),
               ),
+              pw.SizedBox(height: 15),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+
+              ...chantierSinglist
+                  .map(
+                    (c)  {
+                      return pw.Container(
+                        margin: const pw.EdgeInsets.only(bottom: 15),
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Chantier : ${c.data?.nom}',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            pw.SizedBox(height: 5),
+                            pw.Text('Période : Du ${c.data?.dateEmission} au ${c.data?.dateEcheance}',
+                                style: const pw.TextStyle(color: PdfColors.grey700)),
+                            if (c.data!.ouvriers != null && c.data!.camions != null &&
+                                c.data!.machines != null )
+                              if (c.data!.ouvriers!.isNotEmpty && c.data!.camions!.isNotEmpty &&
+                                  c.data!.machines!.isNotEmpty )
+                                pw.Text(
+                              'RESSOURCES :',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                            pw.SizedBox(height: 8),
+
+                            if (c.data!.ouvriers != null)
+                              if (c.data!.ouvriers!.isNotEmpty) ...[
+                                pw.Text(
+                                  "Hommes :",
+                                  style: const pw.TextStyle(
+                                    fontSize: 9,
+                                    color: PdfColors.grey700,
+                                  ),
+                                ),
+                                pw.SizedBox(height: 4),
+                                pw.Wrap(
+                                  children: c!.data!.ouvriers!
+                                      .map(
+                                        (h) =>
+                                        _buildResourceBadge(
+                                          "${h.prenom} ${h.nom}",
+                                          PdfColors.blue800,
+                                        ),
+                                  )
+                                      .toList(),
+                                ),
+                                pw.SizedBox(height: 5),
+                              ],
+
+                            // 2. Camions (Vert)
+                            if (c!.data!.camions != null)
+                              if (c!.data!.camions!.isNotEmpty) ...[
+                                pw.Text(
+                                  "Camions :",
+                                  style: const pw.TextStyle(
+                                    fontSize: 9,
+                                    color: PdfColors.grey700,
+                                  ),
+                                ),
+                                pw.SizedBox(height: 4),
+                                pw.Wrap(
+                                  children: c!.data!.camions!
+                                      .map(
+                                        (c) =>
+                                        _buildResourceBadge(
+                                          "${c.nom} (${c.matricule})",
+                                          PdfColors.green800,
+                                        ),
+                                  )
+                                      .toList(),
+                                ),
+                                pw.SizedBox(height: 5),
+                              ],
+
+                            if (c!.data!.machines != null)
+                              if (c!.data!.machines!.isNotEmpty) ...[
+                                pw.Text(
+                                  "Matériel :",
+                                  style: const pw.TextStyle(
+                                    fontSize: 9,
+                                    color: PdfColors.grey700,
+                                  ),
+                                ),
+                                pw.SizedBox(height: 4),
+                                pw.Wrap(
+                                  children: chantierSing!.data!.machines!
+                                      .map(
+                                        (m) =>
+                                        _buildResourceBadge(
+                                          "${m.nom}",
+                                          PdfColors.orange800,
+                                        ),
+                                  )
+                                      .toList(),
+                                ),
+                              ],
+                            pw.SizedBox(height: 5),
+                            pw.Container(
+                              padding: const pw.EdgeInsets.all(10),
+                              decoration: pw.BoxDecoration(
+                                border: pw.Border.all(
+                                  color: PdfColors.red,
+                                  width: 1.5,
+                                ),
+                                borderRadius: pw.BorderRadius.circular(5),
+                              ),
+                              child: pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text(
+                                    'Remarque :',
+                                    style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      color: PdfColors.red,
+                                    ),
+                                  ),
+                                  pw.SizedBox(height: 5),
+                                  pw.Text(
+                                    c.data?.description != null
+                                        ? "Aucune remarque particulière."
+                                        : c.data?.description ?? "",
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            pw.SizedBox(height: 15),
+
+                            pw.Divider(),
+                            pw.SizedBox(height: 10),
+
+                          ],
+                        ),
+                      );
+                    })
+                  .toList(),
             ],
-          );
+          )];
         },
       ),
     );
 
+
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
-
-
-
-
-
 }

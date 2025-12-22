@@ -367,6 +367,8 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                   }
                   totalTTC = totalHT;
                   final Facture newDocument = Facture(
+                    notes: docFormBloc.notes.value ?? "",
+
                     client: docFormBloc.client.value,
                     clientId: docFormBloc.client.value?.id ?? 1,
                     reference: state.successResponse,
@@ -463,7 +465,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                         Expanded(
                           child: _buildTextField(
                             docFormBloc.notes,
-                            "Notes",
+                            "état d'avancement",
                             "Ecrire ...",
                           ),
                         ),
@@ -545,7 +547,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         _buildLabel(label),
         TextFieldBlocBuilder(
           textFieldBloc: bloc,
-          maxLines: label == "Notes" ? 4 : 1,
+          maxLines: label == "état d'avancement" ? 4 : 1,
           decoration: _inputDecoration(hintText: hint),
           textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
         ),

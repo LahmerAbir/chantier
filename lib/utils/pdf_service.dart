@@ -108,10 +108,13 @@ Future<Uint8List> generateDocumentPdf(Facture document) async {
             ),
 
             pw.Spacer(),
-
+            pw.Text(
+              document.notes != null ?    document.notes!.isNotEmpty ? "état d'avancement : " : "" : "",
+              style:  pw.TextStyle(fontSize: 8, color: PdfColors.black),
+            ),
             // 5. Bas de page
             pw.Text(
-              " ${document.notes }",
+              " ${document.notes  ?? ""}",
               style:  pw.TextStyle(fontSize: 8, color: PdfColors.black),
             ),
           ],

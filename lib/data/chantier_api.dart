@@ -136,9 +136,9 @@ class ChantierApi {
               "date_echeance": dateecheeance,
               "total": total,
               "status": status,
-              "ouvrier_ids":ouvrier_ids ?? [],
-              "machine_ids": machine_ids ?? [],
-              "camion_ids":camion_ids ?? []
+              //"ouvrier_ids":ouvrier_ids ?? [],
+            //  "machine_ids": machine_ids ?? [],
+             // "camion_ids":camion_ids ?? []
             },
           )
           .catchError((onError) {
