@@ -114,6 +114,7 @@ class ChantierApi {
     String? dateecheeance,
     int? total,
     String? status,
+    String? remarque,
     List<int>? ouvrier_ids,
     List<int>? machine_ids,
     List<int>? camion_ids,
@@ -136,9 +137,11 @@ class ChantierApi {
               "date_echeance": dateecheeance,
               "total": total,
               "status": status,
-              //"ouvrier_ids":ouvrier_ids ?? [],
-            //  "machine_ids": machine_ids ?? [],
-             // "camion_ids":camion_ids ?? []
+              "remarque": remarque,
+
+            if(ouvrier_ids != null) if(ouvrier_ids.isNotEmpty) "ouvrier_ids":ouvrier_ids ?? [],
+              if(machine_ids != null) if(machine_ids.isNotEmpty)   "machine_ids": machine_ids ?? [],
+              if(camion_ids != null) if(camion_ids.isNotEmpty)   "camion_ids":camion_ids ?? []
             },
           )
           .catchError((onError) {

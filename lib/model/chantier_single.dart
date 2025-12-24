@@ -30,6 +30,7 @@ class Data {
   String? dateEcheance;
   int? total;
   String? status;
+  String? remarque;
   String? createdAt;
   String? description;
   List<Homme>? ouvriers;
@@ -47,6 +48,7 @@ class Data {
         this.status,
         this.createdAt,
         this.description,
+        this.remarque,
         this.ouvriers,
         this.machines,
         this.camions});
@@ -62,6 +64,7 @@ class Data {
     status = json['status'];
     createdAt = json['created_at'];
     description = json['description'];
+    remarque = json['remarque'];
     if (json['ouvriers'] != null) {
       ouvriers = <Homme>[];
       json['ouvriers'].forEach((v) {
@@ -94,6 +97,7 @@ class Data {
     data['status'] = this.status;
     data['created_at'] = this.createdAt;
     data['description'] = this.description;
+    data['remarque'] = this.remarque;
     if (this.ouvriers != null) {
       data['ouvriers'] = this.ouvriers!.map((v) => v.toJson()).toList();
     }

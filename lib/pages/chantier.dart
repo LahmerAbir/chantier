@@ -292,6 +292,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                                 onPressed: () =>
                                                     _navigateToEdit(chantier),
                                                 tooltip: 'Modifier',
+
                                               ),
                                               IconButton(
                                                 icon: const Icon(

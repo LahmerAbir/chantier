@@ -1,5 +1,7 @@
+import 'package:chantier/model/homme.dart';
 import 'package:chantier/pages/client_page.dart';
 import 'package:chantier/pages/planning_page.dart';
+import 'package:chantier/ui/common/loading.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/foundation.dart';
 
+import '../model/chantier.dart';
+import '../repository/chantier_repository.dart';
 import '../resources/images.dart';
 import '../utils/utils.dart';
 import 'chantier.dart';
@@ -58,7 +62,7 @@ class _MainLayoutState extends State<MainLayout> {
     const ChantiersPage(),
     const PlanningScreen(),
     const DocumentsPage(),
-    ClientManagementScreen(),// Devis & Factures
+    ClientManagementScreen(), // Devis & Factures
     const MatManagementScreen(
       title: "Gestion des Matériels",
       entityName: "Matériel",
@@ -75,11 +79,12 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+    bool isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
 
     return Scaffold(
-        resizeToAvoidBottomInset : true,
+      resizeToAvoidBottomInset: true,
       body: Row(
         children: [
           if (!isMobile)
@@ -269,7 +274,8 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+    bool isMobile =
+        defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
     return Container(
       height: 70,
@@ -279,26 +285,27 @@ class TopBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (isMobile)
-        Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          shape: BoxShape.circle,
-        ),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
               child: IconButton(
                 icon: const Icon(Icons.menu),
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
             ),
-          if (!isMobile)
-            const SizedBox(width: 10),
+          if (!isMobile) const SizedBox(width: 10),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               const CircleAvatar(
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                backgroundImage: NetworkImage(
+                  'https://i.pravatar.cc/150?img=11',
+                ),
               ),
               const SizedBox(width: 10),
 
@@ -316,7 +323,6 @@ class TopBar extends StatelessWidget {
                   ),
                 ],
               ),
-
             ],
           ),
         ],
@@ -325,132 +331,266 @@ class TopBar extends StatelessWidget {
   }
 }
 
-// ---------------------- PAGE 1: TABLEAU DE BORD ----------------------
-
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
   @override
+  State<DashboardPage> createState() => DashboardPageState();
+}
+
+class DashboardPageState extends State<DashboardPage> {
+  double totalVentes = 0.0;
+  double totalAchats = 0.0;
+  double totalFraisGeneraux = 0.0;
+  double beneficeReel = 0.0;
+  List<Chantier> chantiers = [];
+  List<Homme> hommes = [];
+  List<Camion> camions = [];
+  List<Materiel> materiels = [];
+  bool isLoading = true;
+
+  @override
+  initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        chantiers = await ChantierRepository().getChantiers() ?? [];
+        materiels = await ChantierRepository().getMateriel() ?? [];
+        hommes = await ChantierRepository().getHommes() ?? [];
+        camions = await ChantierRepository().getCamions() ?? [];
+        totalVentes = chantiers.fold(
+          0,
+          (sum, item) => sum + (item.total!.toDouble() +  200.000) ?? 0,
+        ) ;
+        totalAchats = chantiers.fold(
+          0,
+          (sum, item) => sum + item.total!.toDouble(),
+        );
+        totalFraisGeneraux = 300000.0000;
+        beneficeReel = 10000000.000;
+
+        setState(() {
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list chantier $e");
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Tableau de bord",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 5),
-          const Text(
-            "Vue d'ensemble de vos chantiers et activités",
-            style: TextStyle(color: Colors.grey),
-          ),
-          SizedBox(height: 20),
-          defaultTargetPlatform != TargetPlatform.android &&
-                  defaultTargetPlatform != TargetPlatform.iOS
-              ? Wrap(
-                  spacing: 20,
-                  runSpacing: 20,
-                  children: [
-                    _StatCard(
-                      title: "Chantiers actifs",
-                      value: "2",
-                      icon: Icons.business,
-                      color: Colors.blue,
-                    ),
-                    _StatCard(
-                      title: "Matériel",
-                      value: "20",
-                      icon: Icons.account_tree_outlined,
-                      color: Colors.blue,
-                    ),
-                    _StatCard(
-                      title: "Camions",
-                      value: "4",
-                      icon: Icons.emoji_transportation,
-                      color: Colors.blue,
-                    ),
-                    _StatCard(
-                      title: "Factures impayées",
-                      value: "3",
-                      icon: Icons.receipt_long,
-                      color: Colors.red,
-                    ),
-                  ],
-                )
-              : Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _StatCardMobile(
-                      title: "Chantiers actifs",
-                      value: "2",
-                      icon: Icons.business,
-                      color: Colors.blue,
-                    ),
-                    _StatCardMobile(
-                      title: "Matériel",
-                      value: "20",
-                      icon: Icons.account_tree_outlined,
-                      color: Colors.blue,
-                    ),
-                    _StatCardMobile(
-                      title: "Camions",
-                      value: "4",
-                      icon: Icons.emoji_transportation,
-                      color: Colors.blue,
-                    ),
-                    _StatCardMobile(
-                      title: "Factures impayées",
-                      value: "3",
-                      icon: Icons.receipt_long,
-                      color: Colors.red,
-                    ),
-                    _StatCardMobile(
-                      title: "Tâches auj.",
-                      value: "5",
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                  ],
-                ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 300,
-            child: Row(
+    double pourcentage = (beneficeReel / totalVentes) * 100;
+    return isLoading
+        ? Loader()
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 2, child: AnimatedBarChart()),
-                SizedBox(width: 20),
+                const Text(
+                  "Tableau de bord",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 5),
+                const Text(
+                  "Vue d'ensemble de vos chantiers et activités",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                SizedBox(height: 20),
+                defaultTargetPlatform != TargetPlatform.android &&
+                        defaultTargetPlatform != TargetPlatform.iOS
+                    ? Wrap(
+                        spacing: 20,
+                        runSpacing: 20,
+                        children: [
+                          _StatCard(
+                            title: "Chantiers actifs",
+                            value: chantiers.length.toString(),
+                            icon: Icons.business,
+                            color: Colors.yellow,
+                          ),
+                          _StatCard(
+                            title: "Matériel",
+                            value: materiels.length.toString(),
+                            icon: Icons.account_tree_outlined,
+                            color: Colors.blue,
+                          ),
+                          _StatCard(
+                            title: "Camions",
+                            value: camions.length.toString(),
+                            icon: Icons.emoji_transportation,
+                            color: Colors.green,
+                          ),
+                          _StatCard(
+                            title: "Ouvriers",
+                            value: hommes.length.toString(),
+                            icon: Icons.person,
+                            color: Colors.red,
+                          ),
+                        ],
+                      )
+                    : Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _StatCardMobile(
+                            title: "Chantiers actifs",
+                            value: "2",
+                            icon: Icons.business,
+                            color: Colors.blue,
+                          ),
+                          _StatCardMobile(
+                            title: "Matériel",
+                            value: "20",
+                            icon: Icons.account_tree_outlined,
+                            color: Colors.blue,
+                          ),
+                          _StatCardMobile(
+                            title: "Camions",
+                            value: "4",
+                            icon: Icons.emoji_transportation,
+                            color: Colors.blue,
+                          ),
+                          _StatCardMobile(
+                            title: "Factures impayées",
+                            value: "3",
+                            icon: Icons.receipt_long,
+                            color: Colors.red,
+                          ),
+                          _StatCardMobile(
+                            title: "Tâches auj.",
+                            value: "5",
+                            icon: Icons.check_circle,
+                            color: Colors.green,
+                          ),
+                        ],
+                      ),
+                const SizedBox(height: 20),
+
+                Card(
+                  elevation: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: SizedBox(
+               //       height: 400,
+                     // width: 500,
+                      child: Column(
+
+                        children: [
+                          Align(alignment : Alignment.topLeft ,child: Text("Rentabilité de chantier" ,style: TextStyle(fontSize: 18 , fontWeight: FontWeight.bold),)) ,
+                          SizedBox(
+                            height: 250,
+                            child: PieChart(
+                              PieChartData(
+                                sectionsSpace: 2,
+                                centerSpaceRadius: 60,
+                                // Pour faire un Donut Chart (plus moderne)
+                                sections: [
+                                  // Achats
+                                  PieChartSectionData(
+                                    color: Colors.orange,
+                                    value: totalAchats,
+                                    title: '',
+                                    // On cache le titre sur le cercle pour la clarté
+                                    radius: 50,
+                                  ),
+                                  // Frais Généraux
+                                  PieChartSectionData(
+                                    color: Colors.redAccent,
+                                    value: totalFraisGeneraux,
+                                    title: '',
+                                    radius: 50,
+                                  ),
+                                  // Bénéfice
+                                  PieChartSectionData(
+                                    color: Colors.green,
+                                    value: beneficeReel,
+                                    title: '${pourcentage.toStringAsFixed(1)}%',
+                                    // Affiche le %
+                                    radius:
+                                        60, // Légèrement plus grand pour le mettre en valeur
+                                    //     textStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildLegend(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                defaultTargetPlatform != TargetPlatform.android &&
+                        defaultTargetPlatform != TargetPlatform.iOS
+                    ? SizedBox(
+                        height: 300,
+                        child: Row(
+                          children: [
+                            //    Expanded(flex: 2, child: HorizontalBarChart()),
+                            Expanded(flex: 2, child: AnimatedPieChart()),
+                          ],
+                        ),
+                      )
+                    : SizedBox(
+                        height: 300,
+                        child: Row(
+                          children: [
+                            Expanded(flex: 2, child: HorizontalBarChart()),
+                          ],
+                        ),
+                      ),
+                defaultTargetPlatform == TargetPlatform.android &&
+                        defaultTargetPlatform == TargetPlatform.iOS
+                    ? SizedBox(
+                        height: 300,
+                        child: Row(
+                          children: [
+                            Expanded(flex: 1, child: AnimatedPieChart()),
+                          ],
+                        ),
+                      )
+                    : Container(),
               ],
             ),
+          );
+  }
+
+  Widget _buildLegend() {
+    return Column(
+      children: [
+        _legendItem("Ventes Totales", totalVentes, Colors.blue),
+        _legendItem("Achats", totalAchats, Colors.orange),
+        _legendItem("Frais Généraux", totalFraisGeneraux, Colors.redAccent),
+        _legendItem("Bénéfice Net", beneficeReel, Colors.green),
+      ],
+    );
+  }
+
+  Widget _legendItem(String label, double value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(width: 12, height: 12, color: color),
+              const SizedBox(width: 8),
+              Text(label),
+            ],
           ),
-          defaultTargetPlatform != TargetPlatform.android &&
-                  defaultTargetPlatform != TargetPlatform.iOS
-              ? SizedBox(
-                  height: 300,
-                  child: Row(
-                    children: [
-                      Expanded(flex: 2, child: HorizontalBarChart()),
-                      Expanded(flex: 2, child: AnimatedPieChart()),
-                    ],
-                  ),
-                )
-              : SizedBox(
-                  height: 300,
-                  child: Row(
-                    children: [Expanded(flex: 2, child: HorizontalBarChart())],
-                  ),
-                ),
-          defaultTargetPlatform == TargetPlatform.android &&
-                  defaultTargetPlatform == TargetPlatform.iOS
-              ? SizedBox(
-                  height: 300,
-                  child: Row(
-                    children: [Expanded(flex: 1, child: AnimatedPieChart())],
-                  ),
-                )
-              : Container(),
+          Text(
+            "${value.toStringAsFixed(2)} DT",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

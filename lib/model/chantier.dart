@@ -43,6 +43,7 @@ class Chantier {
   String? status;
   int? clientId;
   String? createdAt;
+  String? remarque;
   List<Homme>? ouvriers;
   List<Camion>? camions;
   List<Materiel>? machines;
@@ -55,6 +56,7 @@ class Chantier {
         this.dateEcheance,
         this.ouvriers ,
         this.camions ,
+        this.remarque ,
         this.machines ,
         this.total,
         this.status,
@@ -70,6 +72,7 @@ class Chantier {
     description = json['description'];
     dateEcheance = json['date_echeance'];
     total = json['total'];
+    remarque = json['remarque'];
     status = json['status'];
     ouvriers: (json['ouvriers'] as List?)
         ?.map((i) => Homme.fromJson(i))
@@ -90,6 +93,7 @@ class Chantier {
     data['nom'] = this.nom;
     data['owner'] = this.owner;
     data['description'] = this.description;
+    data['remarque'] = this.remarque;
     data['address'] = this.address;
     data['date_emission'] = this.dateEmission;
     data['date_echeance'] = this.dateEcheance;
