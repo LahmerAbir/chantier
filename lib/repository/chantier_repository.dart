@@ -112,6 +112,7 @@ class ChantierRepository {
     String? prenom,
     String? email,
     String? telephone,
+    String? type,
     String? specialite,
   }) async {
     try {
@@ -120,6 +121,7 @@ class ChantierRepository {
         prenom : prenom,
         email : email,
         telephone : telephone,
+        type : type,
         specialite :  specialite,
       );
       if (resp != null) {

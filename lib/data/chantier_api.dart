@@ -14,7 +14,7 @@ class ChantierApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/chantiers', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/chantiers?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion chantier $onError");
@@ -54,7 +54,7 @@ class ChantierApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/clients', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/clients?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion clients $onError");
@@ -209,7 +209,7 @@ class ChantierApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/ouvriers', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/ouvriers?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion chantier $onError");
@@ -227,6 +227,7 @@ class ChantierApi {
     String? prenom,
     String? email,
     String? telephone,
+    String? type,
     String? specialite,
   }) async {
     var token = await Utils.getToken();
@@ -243,6 +244,7 @@ class ChantierApi {
               "prenom": prenom,
               "email": email,
               "telephone": telephone,
+              "type": type,
               "specialite": specialite,
               "cout_journalier": 185,
               "status": "actif",
@@ -315,6 +317,7 @@ class ChantierApi {
               "cout_journalier": cout_journalier,
               "status": "disponible",
             },
+
           )
           .catchError((onError) {
             print("exceeeppttion client $onError");
@@ -334,7 +337,7 @@ class ChantierApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/machines', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/machines?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion chantier $onError");
@@ -354,7 +357,7 @@ class ChantierApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/camions', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/camions?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion chantier $onError");

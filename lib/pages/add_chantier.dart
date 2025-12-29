@@ -17,8 +17,10 @@ import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
 
 class NewProjectDragDropScreen extends StatefulWidget {
-  const NewProjectDragDropScreen({super.key , this.chantierToEdit});
+  const NewProjectDragDropScreen({super.key, this.chantierToEdit});
+
   final Chantier? chantierToEdit;
+
   @override
   State<NewProjectDragDropScreen> createState() =>
       _NewProjectDragDropScreenState();
@@ -92,547 +94,602 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
   @override
   Widget build(BuildContext context) {
     final assignedList = _getAllAssignedResources();
-    return isLoading ? Loader() : BlocProvider(
-      create: (context) => ChantierFormBloc(initialChantier: widget.chantierToEdit , availableClients: clients),
-      child: Builder(
-        builder: (context) {
-          final chantierFormBloc = BlocProvider.of<ChantierFormBloc>(context);
-          chantierFormBloc.client.updateItems(clients);
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updateAssignedResources(chantierFormBloc);
-          });
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(
-               widget.chantierToEdit != null ? "Modifier le Chantier" :  "Créer un nouveau chantier",
-                style: TextStyle(fontSize: isMobile ? 16 : 20),
-              ),
-              backgroundColor: Colors.white,
-              elevation: 0,
+    return isLoading
+        ? Loader()
+        : BlocProvider(
+            create: (context) => ChantierFormBloc(
+              initialChantier: widget.chantierToEdit,
+              availableClients: clients,
+              tousLesHommes: _initialHommes,
             ),
-            body: FormBlocListener<ChantierFormBloc, String, String>(
-              onSubmitting: (context, state) {
-                LoadingDialog.show(context);
-              },
-              onSuccess: (context, state) {
-                LoadingDialog.hide(context);
-
-                ScaffoldMessenger.of(context)..showSnackBar(
-                  SnackBar(content: Text(state.successResponse!)),
+            child: Builder(
+              builder: (context) {
+                final chantierFormBloc = BlocProvider.of<ChantierFormBloc>(
+                  context,
                 );
-                Navigator.of(context).pop(true);
-                },
+                chantierFormBloc.client.updateItems(clients);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _updateAssignedResources(chantierFormBloc);
+                });
 
-              onFailure: (context, state) {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text("une erreur s'est produite"),
-                      backgroundColor: Colors.red,
+                return Scaffold(
+                  appBar: AppBar(
+                    title: Text(
+                      widget.chantierToEdit != null
+                          ? "Modifier le Chantier"
+                          : "Créer un nouveau chantier",
+                      style: TextStyle(fontSize: isMobile ? 16 : 20),
                     ),
-                  );
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Informations du projet",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  body: FormBlocListener<ChantierFormBloc, String, String>(
+                    onSubmitting: (context, state) {
+                      LoadingDialog.show(context);
+                    },
+                    onSuccess: (context, state) {
+                      LoadingDialog.hide(context);
+
+                      ScaffoldMessenger.of(context)..showSnackBar(
+                        SnackBar(content: Text(state.successResponse!)),
+                      );
+                      Navigator.of(context).pop(true);
+                    },
+
+                    onFailure: (context, state) {
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          SnackBar(
+                            content: Text("une erreur s'est produite"),
+                            backgroundColor: Colors.red,
                           ),
-                          const SizedBox(height: 20),
-
-                          _buildTextField(
-                            chantierFormBloc.nomChantier,
-                            "Nom du chantier",
-                            "Ex: Résidence Le Parc",
-                          ),
-                          const SizedBox(height: 15),
-                          isLoading ? Loader() :  DropdownFieldBlocBuilder<Client>(
-                            selectFieldBloc: chantierFormBloc.client,
-                            itemBuilder: (context, client) => FieldItem(
-                              child: Text(client.nom ?? 'Client sans nom'),
-                            ),
-
-
-                            decoration: const InputDecoration(
-                              labelText: 'Client',
-                              hintText: 'Sélectionnez le client',
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-
-                          _buildLabel('Status'),
-                          DropdownFieldBlocBuilder<String>(
-                            selectFieldBloc: chantierFormBloc.status,
-                            decoration: _inputDecoration(
-                              hintText: "Sélectionner un statut",
-                            ),
-                            itemBuilder: (context, value) =>
-                                FieldItem(child: Text(value)),
-                          ),
-                          const SizedBox(height: 15),
-
-                          _buildTextField(
-                            chantierFormBloc.budget,
-                            "Budget (Total)",
-                            "Ex: 450000 €",
-
-                          ),
-                          const SizedBox(height: 15),
-
-                          // Dates
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDateField(
-                                  chantierFormBloc.dateDebut,
-                                  "Date début",
+                        );
+                    },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Informations du projet",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: _buildDateField(
-                                  chantierFormBloc.dateFin,
-                                  "Date fin",
+                                const SizedBox(height: 20),
+
+                                _buildTextField(
+                                  chantierFormBloc.nomChantier,
+                                  "Nom du chantier",
+                                  "Ex: Résidence Le Parc",
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          _buildTextField(
-                            chantierFormBloc.description,
-                            "Description",
-                            "",
-                            maxline: 3
-                          ),
-                          const SizedBox(height: 30),
-
-                          const Text(
-                            "Ressources assignées",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Text(
-                            "Glissez-déposez des ressources ici",
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                          const SizedBox(height: 10),
-
-                          isMobile
-                              ? InkWell(
-                                  onTap: () {
-                                    if (!(_initialHommes.isEmpty &&
-                                        _initialMateriels.isEmpty &&
-                                        _availableCamions.isEmpty))
-                                      _openTapToSelectModal(chantierFormBloc);
-                                  }, // Appelle la méthode d'ouverture de la modale
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: assignedList.isEmpty
-                                        ? Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.people_alt_outlined,
-                                                  size: 40,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                                const Text(
-                                                  "Aucune ressource assignée. Cliquez sur Modifier.",
-                                                ),
-                                              ],
+                                const SizedBox(height: 15),
+                                isLoading
+                                    ? Loader()
+                                    : DropdownFieldBlocBuilder<Client>(
+                                        selectFieldBloc:
+                                            chantierFormBloc.client,
+                                        itemBuilder: (context, client) =>
+                                            FieldItem(
+                                              child: Text(
+                                                client.nom ?? 'Client sans nom',
+                                              ),
                                             ),
-                                          )
-                                        : Wrap(
-                                            spacing: 10,
-                                            runSpacing: 10,
-                                            children: assignedList.map((res) {
-                                              return Chip(
-                                                avatar: Icon(
-                                                  res.icon,
-                                                  size: 16,
-                                                ),
-                                                label: Text(res.nom ?? ""),
-                                                onDeleted: () {
-                                                  _openTapToSelectModal(
-                                                    chantierFormBloc,
-                                                  );
-                                                },
-                                                deleteIcon: const Icon(
-                                                  Icons.edit,
-                                                  size: 16,
-                                                ),
-                                              );
-                                            }).toList(),
+
+                                        decoration: const InputDecoration(
+                                          labelText: 'Client',
+                                          hintText: 'Sélectionnez le client',
+                                        ),
+                                      ),
+                                const SizedBox(height: 15),
+                                _buildLabel('Chef de projet'),
+
+                                DropdownFieldBlocBuilder<Homme>(
+                                  selectFieldBloc: chantierFormBloc.chefProjet,
+                                  decoration: InputDecoration(
+                                    labelText: 'Chef de Projet',
+                                  ),
+                                  itemBuilder: (context, homme) => FieldItem(
+                                    child: Text("${homme.prenom} ${homme.nom}"),
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+
+                                _buildLabel('Status'),
+                                DropdownFieldBlocBuilder<String>(
+                                  selectFieldBloc: chantierFormBloc.status,
+                                  decoration: _inputDecoration(
+                                    hintText: "Sélectionner un statut",
+                                  ),
+                                  itemBuilder: (context, value) =>
+                                      FieldItem(child: Text(value)),
+                                ),
+                                const SizedBox(height: 15),
+
+                                _buildTextField(
+                                  chantierFormBloc.budget,
+                                  "Budget (Total)",
+                                  "Ex: 450000 €",
+                                ),
+                                const SizedBox(height: 15),
+
+                                // Dates
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildDateField(
+                                        chantierFormBloc.dateDebut,
+                                        "Date début",
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Expanded(
+                                      child: _buildDateField(
+                                        chantierFormBloc.dateFin,
+                                        "Date fin",
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+
+                                _buildTextField(
+                                  chantierFormBloc.description,
+                                  "Description",
+                                  "",
+                                  maxline: 3,
+                                ),
+                                const SizedBox(height: 30),
+
+                                const Text(
+                                  "Ressources assignées",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text(
+                                  "Glissez-déposez des ressources ici",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+
+                                isMobile
+                                    ? InkWell(
+                                        onTap: () {
+                                          if (!(_initialHommes.isEmpty &&
+                                              _initialMateriels.isEmpty &&
+                                              _availableCamions.isEmpty))
+                                            _openTapToSelectModal(
+                                              chantierFormBloc,
+                                            );
+                                        }, // Appelle la méthode d'ouverture de la modale
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: Colors.grey.shade300,
+                                              width: 1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
+                                          child: assignedList.isEmpty
+                                              ? Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .people_alt_outlined,
+                                                        size: 40,
+                                                        color: Colors
+                                                            .grey
+                                                            .shade400,
+                                                      ),
+                                                      const Text(
+                                                        "Aucune ressource assignée. Cliquez sur Modifier.",
+                                                      ),
+                                                    ],
+                                                  ),
+                                                )
+                                              : Wrap(
+                                                  spacing: 10,
+                                                  runSpacing: 10,
+                                                  children: assignedList.map((
+                                                    res,
+                                                  ) {
+                                                    return Chip(
+                                                      avatar: Icon(
+                                                        res.icon,
+                                                        size: 16,
+                                                      ),
+                                                      label: Text(
+                                                        res.nom ?? "",
+                                                      ),
+                                                      onDeleted: () {
+                                                        _openTapToSelectModal(
+                                                          chantierFormBloc,
+                                                        );
+                                                      },
+                                                      deleteIcon: const Icon(
+                                                        Icons.edit,
+                                                        size: 16,
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                        ),
+                                      )
+                                    : DragTarget<RessourceBase>(
+                                        onWillAccept: (data) => true,
+                                        onAccept: (resource) {
+                                          setState(() {
+                                            if (resource is Homme) {
+                                              _availableHommes.removeWhere(
+                                                (h) => h.id == resource.id,
+                                              );
+                                              _assignedHommes.add(resource);
+                                            } else if (resource is Materiel) {
+                                              _availableMateriels.removeWhere(
+                                                (m) => m.id == resource.id,
+                                              );
+                                              _assignedMateriels.add(resource);
+                                            } else if (resource is Camion) {
+                                              _availableCamions.removeWhere(
+                                                (c) => c.id == resource.id,
+                                              );
+                                              _assignedCamions.add(resource);
+                                            }
+
+                                            _updateAssignedResources(
+                                              chantierFormBloc,
+                                            ); // Mettre à jour le bloc
+                                          });
+                                        },
+                                        builder: (context, candidateData, rejectedData) {
+                                          final assignedList =
+                                              _getAllAssignedResources();
+
+                                          return Container(
+                                            width: double.infinity,
+                                            constraints: const BoxConstraints(
+                                              minHeight: 150,
+                                            ),
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              // ...
+                                              border: Border.all(
+                                                color: candidateData.isNotEmpty
+                                                    ? Colors.blue
+                                                    : Colors.grey.shade300,
+                                                style: BorderStyle.solid,
+                                                width: 2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+
+                                            child: assignedList.isEmpty
+                                                ? Center(
+                                                    child: Column(
+                                                      children: [
+                                                        Icon(
+                                                          Icons
+                                                              .add_circle_outline,
+                                                          size: 40,
+                                                          color: Colors
+                                                              .grey
+                                                              .shade400,
+                                                        ),
+                                                        const Text(
+                                                          "Déposez ici",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                : Wrap(
+                                                    spacing: 10,
+                                                    runSpacing: 10,
+                                                    children: assignedList.map((
+                                                      res,
+                                                    ) {
+                                                      return Chip(
+                                                        avatar: Icon(
+                                                          res.icon,
+                                                          size: 16,
+                                                        ),
+                                                        label: Text(
+                                                          res.nom ?? "",
+                                                        ),
+                                                        onDeleted: () {
+                                                          setState(() {
+                                                            if (res is Homme) {
+                                                              _assignedHommes
+                                                                  .removeWhere(
+                                                                    (h) =>
+                                                                        h.id ==
+                                                                        res.id,
+                                                                  );
+                                                              _availableHommes
+                                                                  .add(res);
+                                                            } else if (res
+                                                                is Materiel) {
+                                                              _assignedMateriels
+                                                                  .removeWhere(
+                                                                    (m) =>
+                                                                        m.id ==
+                                                                        res.id,
+                                                                  );
+                                                              _availableMateriels
+                                                                  .add(res);
+                                                            } else if (res
+                                                                is Camion) {
+                                                              _assignedCamions
+                                                                  .removeWhere(
+                                                                    (c) =>
+                                                                        c.id ==
+                                                                        res.id,
+                                                                  );
+                                                              _availableCamions
+                                                                  .add(res);
+                                                            }
+                                                            _updateAssignedResources(
+                                                              chantierFormBloc,
+                                                            ); // Mettre à jour le bloc
+                                                          });
+                                                        },
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                          );
+                                        },
+                                      ),
+                                const SizedBox(height: 30),
+
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: chantierFormBloc.submit,
+                                    // Utilise la fonction submit du FormBloc
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade700,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      "Créer le chantier",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        if (!isMobile)
+                          isLoading
+                              ? Loader()
+                              : _availableHommes.isNotEmpty
+                              ? Container(
+                                  width: 300,
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Ouvriers",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          itemCount: _availableHommes.length,
+                                          itemBuilder: (context, index) {
+                                            final res = _availableHommes[index];
+                                            return Draggable<Homme>(
+                                              data: res,
+                                              feedback: Material(
+                                                elevation: 4,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Container(
+                                                  width: 250,
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  color: Colors.white,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        res.icon,
+                                                        color: Colors.blue,
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      Text(res.nom ?? ""),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              childWhenDragging: Opacity(
+                                                opacity: 0.5,
+                                                child: _buildResourceCard(res),
+                                              ),
+                                              child: _buildResourceCard(res),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 )
-                              : DragTarget<RessourceBase>(
-                                  onWillAccept: (data) => true,
-                                  onAccept: (resource) {
-                                    setState(() {
-                                      if (resource is Homme) {
-                                        _availableHommes.removeWhere(
-                                          (h) => h.id == resource.id,
-                                        );
-                                        _assignedHommes.add(resource);
-                                      } else if (resource is Materiel) {
-                                        _availableMateriels.removeWhere(
-                                          (m) => m.id == resource.id,
-                                        );
-                                        _assignedMateriels.add(resource);
-                                      } else if (resource is Camion) {
-                                        _availableCamions.removeWhere(
-                                          (c) => c.id == resource.id,
-                                        );
-                                        _assignedCamions.add(resource);
-                                      }
-
-                                      _updateAssignedResources(
-                                        chantierFormBloc,
-                                      ); // Mettre à jour le bloc
-                                    });
-                                  },
-                                  builder: (context, candidateData, rejectedData) {
-                                    final assignedList =
-                                        _getAllAssignedResources();
-
-                                    return Container(
-                                      width: double.infinity,
-                                      constraints: const BoxConstraints(
-                                        minHeight: 150,
-                                      ),
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        // ...
-                                        border: Border.all(
-                                          color: candidateData.isNotEmpty
-                                              ? Colors.blue
-                                              : Colors.grey.shade300,
-                                          style: BorderStyle.solid,
-                                          width: 2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-
-                                      child: assignedList.isEmpty
-                                          ? Center(
-                                              child: Column(
-                                                children: [
-                                                  Icon(
-                                                    Icons.add_circle_outline,
-                                                    size: 40,
-                                                    color: Colors.grey.shade400,
-                                                  ),
-                                                  const Text("Déposez ici"),
-                                                ],
-                                              ),
-                                            )
-                                          : Wrap(
-                                              spacing: 10,
-                                              runSpacing: 10,
-                                              children: assignedList.map((res) {
-                                                return Chip(
-                                                  avatar: Icon(
-                                                    res.icon,
-                                                    size: 16,
-                                                  ),
-                                                  label: Text(res.nom ?? ""),
-                                                  onDeleted: () {
-                                                    setState(() {
-                                                      if (res is Homme) {
-                                                        _assignedHommes
-                                                            .removeWhere(
-                                                              (h) =>
-                                                                  h.id ==
-                                                                  res.id,
-                                                            );
-                                                        _availableHommes.add(
-                                                          res,
-                                                        );
-                                                      } else if (res
-                                                          is Materiel) {
-                                                        _assignedMateriels
-                                                            .removeWhere(
-                                                              (m) =>
-                                                                  m.id ==
-                                                                  res.id,
-                                                            );
-                                                        _availableMateriels.add(
-                                                          res,
-                                                        );
-                                                      } else if (res
-                                                          is Camion) {
-                                                        _assignedCamions
-                                                            .removeWhere(
-                                                              (c) =>
-                                                                  c.id ==
-                                                                  res.id,
-                                                            );
-                                                        _availableCamions.add(
-                                                          res,
-                                                        );
-                                                      }
-                                                      _updateAssignedResources(
-                                                        chantierFormBloc,
-                                                      ); // Mettre à jour le bloc
-                                                    });
-                                                  },
-                                                );
-                                              }).toList(),
-                                            ),
-                                    );
-                                  },
-                                ),
-                          const SizedBox(height: 30),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: chantierFormBloc.submit,
-                              // Utilise la fonction submit du FormBloc
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Text(
-                                "Créer le chantier",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
+                              : Center(child: Text("Liste est vide ")),
+                        if (!isMobile)
+                          Container(
+                            height: MediaQuery.of(context).size.height,
+                            width: 1,
+                            color: Colors.grey,
                           ),
-                        ],
-                      ),
+                        if (!isMobile)
+                          isLoading
+                              ? Loader()
+                              : _availableMateriels.isNotEmpty
+                              ? Container(
+                                  width: 300,
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Matériel",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          itemCount: _availableMateriels.length,
+                                          itemBuilder: (context, index) {
+                                            final res =
+                                                _availableMateriels[index];
+                                            return Draggable<Materiel>(
+                                              data: res,
+                                              feedback: Material(
+                                                elevation: 4,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Container(
+                                                  width: 250,
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  color: Colors.white,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        res.icon,
+                                                        color: Colors.blue,
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      Text(res.nom ?? ""),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              childWhenDragging: Opacity(
+                                                opacity: 0.5,
+                                                child: _buildResourceCard(res),
+                                              ),
+                                              child: _buildResourceCard(res),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Center(child: Text("Liste est vide")),
+                        if (!isMobile)
+                          Container(
+                            height: MediaQuery.of(context).size.height,
+                            width: 1,
+                            color: Colors.grey,
+                          ),
+                        if (!isMobile)
+                          isLoading
+                              ? Loader()
+                              : _availableCamions.isNotEmpty
+                              ? Container(
+                                  width: 300,
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Camions",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          itemCount: _availableCamions.length,
+                                          itemBuilder: (context, index) {
+                                            final res =
+                                                _availableCamions[index];
+                                            return Draggable<Camion>(
+                                              data: res,
+                                              feedback: Material(
+                                                elevation: 4,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Container(
+                                                  width: 250,
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  color: Colors.white,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        res.icon,
+                                                        color: Colors.blue,
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      Text(res.nom ?? ""),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              childWhenDragging: Opacity(
+                                                opacity: 0.5,
+                                                child: _buildResourceCard(res),
+                                              ),
+                                              child: _buildResourceCard(res),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Center(child: Text("Liste est vide")),
+                      ],
                     ),
                   ),
-
-
-                  if (!isMobile)
-                    isLoading
-                        ? Loader()
-                        : _availableHommes.isNotEmpty
-                        ? Container(
-                            width: 300,
-                            color: Colors.white,
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Ouvriers",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: _availableHommes.length,
-                                    itemBuilder: (context, index) {
-                                      final res = _availableHommes[index];
-                                      return Draggable<Homme>(
-                                        data: res,
-                                        feedback: Material(
-                                          elevation: 4,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Container(
-                                            width: 250,
-                                            padding: const EdgeInsets.all(12),
-                                            color: Colors.white,
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  res.icon,
-                                                  color: Colors.blue,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Text(res.nom ?? ""),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        childWhenDragging: Opacity(
-                                          opacity: 0.5,
-                                          child: _buildResourceCard(res),
-                                        ),
-                                        child: _buildResourceCard(res),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Center(child: Text("Liste est vide ")),
-                  if (!isMobile)
-                    Container(
-                      height: MediaQuery.of(context).size.height,
-                      width: 1,
-                      color: Colors.grey,
-                    ),
-                  if (!isMobile)
-                    isLoading
-                        ? Loader()
-                        : _availableMateriels.isNotEmpty
-                        ? Container(
-                            width: 300,
-                            color: Colors.white,
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Matériel",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: _availableMateriels.length,
-                                    itemBuilder: (context, index) {
-                                      final res = _availableMateriels[index];
-                                      return Draggable<Materiel>(
-                                        data: res,
-                                        feedback: Material(
-                                          elevation: 4,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Container(
-                                            width: 250,
-                                            padding: const EdgeInsets.all(12),
-                                            color: Colors.white,
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  res.icon,
-                                                  color: Colors.blue,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Text(res.nom ?? ""),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        childWhenDragging: Opacity(
-                                          opacity: 0.5,
-                                          child: _buildResourceCard(res),
-                                        ),
-                                        child: _buildResourceCard(res),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Center(child: Text("Liste est vide")),
-                  if (!isMobile)
-                    Container(
-                      height: MediaQuery.of(context).size.height,
-                      width: 1,
-                      color: Colors.grey,
-                    ),
-                  if (!isMobile)
-                    isLoading
-                        ? Loader()
-                        : _availableCamions.isNotEmpty
-                        ? Container(
-                            width: 300,
-                            color: Colors.white,
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "Camions",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: _availableCamions.length,
-                                    itemBuilder: (context, index) {
-                                      final res = _availableCamions[index];
-                                      return Draggable<Camion>(
-                                        data: res,
-                                        feedback: Material(
-                                          elevation: 4,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Container(
-                                            width: 250,
-                                            padding: const EdgeInsets.all(12),
-                                            color: Colors.white,
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  res.icon,
-                                                  color: Colors.blue,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Text(res.nom ?? ""),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        childWhenDragging: Opacity(
-                                          opacity: 0.5,
-                                          child: _buildResourceCard(res),
-                                        ),
-                                        child: _buildResourceCard(res),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Center(child: Text("Liste est vide")),
-                ],
-              ),
+                );
+              },
             ),
           );
-        },
-      ),
-    );
   }
 
   void _openTapToSelectModal(ChantierFormBloc chantierFormBloc) async {
@@ -700,7 +757,6 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
           }
         }
       }
-
 
       _updateAssignedResources(ChantierFormBloc);
     });
@@ -774,7 +830,12 @@ class _NewProjectDragDropScreenState extends State<NewProjectDragDropScreen> {
     );
   }
 
-  Widget _buildTextField(TextFieldBloc bloc, String label, String hint , {int maxline = 1}) {
+  Widget _buildTextField(
+    TextFieldBloc bloc,
+    String label,
+    String hint, {
+    int maxline = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

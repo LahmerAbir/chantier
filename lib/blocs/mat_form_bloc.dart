@@ -7,8 +7,11 @@ class MaterielFormBloc extends FormBloc<String, String> {
 
   final nom = TextFieldBloc(validators: [FieldBlocValidators.required]);
   final numeroSerie = TextFieldBloc();
-  final type = TextFieldBloc();
-
+  final SelectFieldBloc<String, dynamic> type = SelectFieldBloc(
+    items: ['petit', 'moyen', 'grand'],
+    initialValue: 'petit',
+    validators: [FieldBlocValidators.required],
+  );
   final coutLocationJournalier = TextFieldBloc(
       initialValue: '0',
       validators: [

@@ -258,7 +258,21 @@ class HommeForm extends StatelessWidget {
                 textFieldBloc: formBloc.specialite,
                 decoration: const InputDecoration(labelText: 'Spécialité'),
               ),
+              SizedBox(
+                height: 80,
+                child: DropdownFieldBlocBuilder<String>(
+                  selectFieldBloc: formBloc.type,
+                  textStyle: TextStyle(color: Colors.black),
+                  decoration: InputDecoration(
+                    labelText: 'Type de poste',
+                    labelStyle: TextStyle(color: Colors.black)
+                  ),
+                  itemBuilder: (context, value) => FieldItem(
+                    child: Text(value ,style:  TextStyle(color: Colors.black),),
+                  ),
 
+                ),
+              ),
               TextFieldBlocBuilder(
                 textFieldBloc: formBloc.coutJournalier,
                 decoration: const InputDecoration(labelText: 'Coût Journalier'),

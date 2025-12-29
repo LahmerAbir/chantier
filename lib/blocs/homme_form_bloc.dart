@@ -11,7 +11,11 @@ class HommeFormBloc extends FormBloc<String, String> {
   final email = TextFieldBloc(validators: [FieldBlocValidators.email]);
   final telephone = TextFieldBloc();
   final specialite = TextFieldBloc();
-
+  final SelectFieldBloc<String, dynamic> type = SelectFieldBloc(
+    items: ['ouvrier', 'chef projet', 'désamianteur', 'conducteur'],
+    initialValue: 'ouvrier',
+    validators: [FieldBlocValidators.required],
+  );
   final coutJournalier = TextFieldBloc(
       initialValue: '0',
       validators: [
@@ -30,22 +34,14 @@ class HommeFormBloc extends FormBloc<String, String> {
 
   HommeFormBloc() {
     addFieldBlocs(
-      fieldBlocs: [nom, prenom, email, telephone, specialite, coutJournalier],
+      fieldBlocs: [nom, prenom, email, telephone, specialite, type ,coutJournalier],
     );
   }
 
   @override
   void onSubmitting() async {
     try {
-      // 1. Créer l'objet Homme
-      final newHommeData = Homme(
-        nom: nom.value,
-        prenom: prenom.value,
-        email: email.value,
-        telephone: telephone.value,
-        specialite: specialite.value,
-        coutJournalier: int.tryParse(coutJournalier.value),
-      );
+
 
       try {
         var res = await ChantierRepository().addHomme(nom: nom.value,
@@ -53,6 +49,7 @@ class HommeFormBloc extends FormBloc<String, String> {
           email: email.value,
           telephone: telephone.value,
           specialite: specialite.value,
+          type: type.value,
          );
         if (res != null)
           emitSuccess(successResponse: 'Homme créé avec succès.');

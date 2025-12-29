@@ -126,6 +126,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
               : documents.isNotEmpty
               ? SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
+            height: isMobile ?  MediaQuery.of(context).size.height * 0.6 : MediaQuery.of(context).size.height * 0.8,
                   child: Scrollbar(
                     controller: scrollController,
                     thumbVisibility: true,

@@ -74,193 +74,132 @@ class _PlanningScreenState extends State<PlanningScreen> {
     });
     }
   }
-  Future<void> generateAndPrintPlanningPdf({
-    required List<ChantierSingle> chantierSinglist,
-  }) async {
+
+  pw.TableRow _buildTableRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
+        ),
+      ],
+    );
+  }
+
+
+  Future<void> generateAndPrintListeChantiersPdf(List<ChantierSingle> chantiers) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd/MM/yyyy');
     final String dateAujourdhui = dateFormat.format(DateTime.now());
-    final String dateDemain = dateFormat.format(
-      DateTime.now().add(const Duration(days: 1)),
-    );
-
-    pw.Widget _buildResourceBadge(String text, PdfColor color) {
-      return pw.Container(
-        margin: const pw.EdgeInsets.only(right: 4, bottom: 4),
-        padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: pw.BoxDecoration(
-          color: PdfColors.grey100, // Fond gris très clair
-          borderRadius: pw.BorderRadius.circular(3),
-          border: pw.Border.all(color: color, width: 0.5),
-        ),
-        child: pw.Text(text, style: pw.TextStyle(fontSize: 11, color: color)),
-      );
-    }
-
+    int index = 0;
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (context) => pw.Column(
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text('Planning',
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.Text(' $dateAujourdhui', style:  pw.TextStyle(fontSize: 16 , fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+            pw.Divider(thickness: 2),
+            pw.SizedBox(height: 10),
+          ],
+        ),
         build: (pw.Context context) {
           return [
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 1),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1), // Nom du chantier
+                1: const pw.FlexColumnWidth(3), // Chef de projet
+                2: const pw.FlexColumnWidth(2), // Ressources (Ouvriers/Matériel)
+                3: const pw.FlexColumnWidth(4), // Statut/Dates
+                4: const pw.FlexColumnWidth(3), // Statut/Dates
+
+                5: const pw.FlexColumnWidth(2), // Statut/Dates
+                6: const pw.FlexColumnWidth(3), // Statut/Dates
+                7: const pw.FlexColumnWidth(3), // Statut/Dates
+                7: const pw.FlexColumnWidth(3), // Statut/Dates
+              },
               children: [
-                pw.Header(
-                  level: 0,
-                  child: pw.Text('RAPPORT JOURNALIER $dateAujourdhui'),
+                // --- ENTÊTE DU TABLEAU (Le Titre en haut) ---
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    _buildHeaderCell("#"),
+                    _buildHeaderCell("Chantier"),
+                    _buildHeaderCell("Chef Projet"),
+                    _buildHeaderCell("Informations du chantier"),
+                    _buildHeaderCell("Ouvriers"),
+                    _buildHeaderCell("Conducteur"),
+                    _buildHeaderCell("Machines"),
+                    _buildHeaderCell("Machines XL"),
+                    _buildHeaderCell("Camion , tracteur , notes"),
+                  ],
                 ),
-                pw.SizedBox(height: 5),
 
-                ...chantierSinglist.map((c) {
-                  print("remarque ${c.data!.remarque ?? ""}");
-                  return pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 15),
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'Chantier : ${c.data?.nom}',
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        pw.SizedBox(height: 5),
-                        pw.Text(
-                          'Période : Du ${c.data?.dateEmission} au ${c.data?.dateEcheance}',
-                          style: const pw.TextStyle(color: PdfColors.grey700),
-                        ),
-                        if (c.data!.ouvriers != null &&
-                            c.data!.camions != null &&
-                            c.data!.machines != null)
-                          if (c.data!.ouvriers!.isNotEmpty &&
-                              c.data!.camions!.isNotEmpty &&
-                              c.data!.machines!.isNotEmpty)
-                            pw.Text(
-                              'RESSOURCES :',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                        pw.SizedBox(height: 8),
-
-                        if (c.data!.ouvriers != null)
-                          if (c.data!.ouvriers!.isNotEmpty) ...[
-                            pw.Text(
-                              "Hommes :",
-                              style: const pw.TextStyle(
-                                fontSize: 9,
-                                color: PdfColors.grey700,
-                              ),
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Wrap(
-                              children: c!.data!.ouvriers!
-                                  .map(
-                                    (h) => _buildResourceBadge(
-                                      "${h.prenom} ${h.nom}",
-                                      PdfColors.blue800,
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                            pw.SizedBox(height: 5),
-                          ],
-
-                        // 2. Camions (Vert)
-                        if (c!.data!.camions != null)
-                          if (c!.data!.camions!.isNotEmpty) ...[
-                            pw.Text(
-                              "Camions :",
-                              style: const pw.TextStyle(
-                                fontSize: 9,
-                                color: PdfColors.grey700,
-                              ),
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Wrap(
-                              children: c!.data!.camions!
-                                  .map(
-                                    (c) => _buildResourceBadge(
-                                      "${c.nom} (${c.matricule})",
-                                      PdfColors.green800,
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                            pw.SizedBox(height: 5),
-                          ],
-
-                        if (c!.data!.machines != null)
-                          if (c!.data!.machines!.isNotEmpty) ...[
-                            pw.Text(
-                              "Matériel :",
-                              style: const pw.TextStyle(
-                                fontSize: 9,
-                                color: PdfColors.grey700,
-                              ),
-                            ),
-                            pw.SizedBox(height: 4),
-                            pw.Wrap(
-                              children: c!.data!.machines!
-                                  .map(
-                                    (m) => _buildResourceBadge(
-                                      "${m.nom}",
-                                      PdfColors.orange800,
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ],
-                        pw.SizedBox(height: 5),
-                        pw.Container(
-                          padding: const pw.EdgeInsets.all(10),
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(
-                              color: PdfColors.red,
-                              width: 1.5,
-                            ),
-                            borderRadius: pw.BorderRadius.circular(5),
-                          ),
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(
-                                'Remarque :',
-                                style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: PdfColors.red,
-                                ),
-                              ),
-                              pw.SizedBox(height: 5),
-                              pw.Text(
+                ...chantiers.map((c) {
+                   index = index + 1;
+                  final machinesXL = c.data?.machines != null ?  c.data!.machines!.isNotEmpty ? c.data!.machines!.where((m) => m.typem == "grand").toList() : [] : [];
+                  return pw.TableRow(
 
 
-                                     c.data?.remarque ?? "Aucune remarque particulière.",
-                              ),
-                            ],
-                          ),
-                        ),
+                    children: [
+                      _buildCell(index.toString()),
+                      _buildCell(c.data?.nom?.toUpperCase() ?? "SANS NOM"),
+                      _buildCell(c.data?.owner != null ? "${c.data?.owner}" : "-"),
+                      _buildCell(c.data?.description != null ? "${c.data?.description}" : "-"),
+                      _buildCell(c.data?.ouvriers != null ?  c.data!.ouvriers!.isNotEmpty ? c.data!.ouvriers!.map((c) => '${c.prenom} ${c.nom}').join(', ') : "" : "" ),
+                      _buildCell( "-" ),
+                      _buildCell(c.data?.machines != null ?  c.data!.machines!.isNotEmpty ? c.data!.machines!.map((c) => c.nom).join(', ') : "" : "" ),
+                      _buildCell(machinesXL.isEmpty ? "-" : machinesXL.map((m) => m.nom).join('\n')),
+                      _buildCell(c.data?.camions != null ?  c.data!.camions!.isNotEmpty ? c.data!.camions!.map((c) => c.matricule).join(', ') : "" : "" ),
 
-                        pw.SizedBox(height: 15),
-
-                        pw.Divider(),
-                        pw.SizedBox(height: 10),
-                      ],
-                    ),
+                    ],
                   );
                 }).toList(),
               ],
             ),
           ];
         },
+        footer: (context) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text('Page ${context.pageNumber}/${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
+        ),
       ),
     );
 
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
+
+  pw.Widget _buildHeaderCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text,
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+          textAlign: pw.TextAlign.center),
+    );
+  }
+
+// Helper pour les cellules de données
+  pw.Widget _buildCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text, style: const pw.TextStyle(fontSize: 8)),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -288,8 +227,8 @@ class _PlanningScreenState extends State<PlanningScreen> {
                     if (chantierSin != null) listchantising.add(chantierSin);
                   }
 
-                  await generateAndPrintPlanningPdf(
-                    chantierSinglist: listchantising,
+                  await generateAndPrintListeChantiersPdf(
+                     listchantising,
                   );
                   LoadingDialog.hide(context);
                 },
@@ -334,6 +273,12 @@ class _PlanningScreenState extends State<PlanningScreen> {
                               ),
                               DataColumn(
                                 label: Text(
+                                  'Chef de projet',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              DataColumn(
+                                label: Text(
                                   'Date Début',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
@@ -344,12 +289,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              DataColumn(
-                                label: Text(
-                                  'Description',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
+
                               DataColumn(
                                 label: Text(
                                   'Action',
@@ -368,20 +308,21 @@ class _PlanningScreenState extends State<PlanningScreen> {
                                       ),
                                     ),
                                   ),
-                                  DataCell(Text(chantier.dateEmission ?? "")),
-                                  DataCell(Text(chantier.dateEcheance ?? "")),
                                   DataCell(
                                     // Limiter la largeur de la description pour ne pas casser le tableau
                                     ConstrainedBox(
                                       constraints: const BoxConstraints(
-                                        maxWidth: 200,
+                                        maxWidth: 150,
                                       ),
                                       child: Text(
-                                        chantier.description ?? "",
+                                        chantier.owner ?? "",
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ),
+                                  DataCell(Text(chantier.dateEmission ?? "")),
+                                  DataCell(Text(chantier.dateEcheance ?? "")),
+
                                   DataCell(
                                     // Le bouton PDF
                                     IconButton(

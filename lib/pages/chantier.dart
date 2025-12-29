@@ -186,7 +186,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
                                     ),
                                     DataColumn(
                                       label: Text(
-                                        'Client',
+                                        'Chef de projet',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -341,7 +341,7 @@ class _ChantiersPageState extends State<ChantiersPage> {
           ),
           DataColumn(
             label: Text(
-              'Client',
+              'Chef de projet',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),

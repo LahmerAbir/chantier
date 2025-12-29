@@ -51,7 +51,7 @@ class Homme extends RessourceBase {
   int? coutJournalier;
   String? status;
   String? createdAt;
-
+  String? typeh;
   Homme({
     this.id,
     this.nom,
@@ -59,6 +59,7 @@ class Homme extends RessourceBase {
     this.email,
     this.telephone,
     this.specialite,
+    this.typeh,
     this.coutJournalier,
     this.status,
     this.createdAt,
@@ -70,6 +71,7 @@ class Homme extends RessourceBase {
       super(json['id'], json['nom'], 'homme', Icons.person) {
     prenom = json['prenom'];
     email = json['email'];
+    typeh = json['type'];
     telephone = json['telephone'];
     specialite = json['specialite'];
     coutJournalier = json['cout_journalier'];
@@ -81,6 +83,7 @@ class Homme extends RessourceBase {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     data['id'] = this.id;
     data['nom'] = this.nom;
+    data['type'] = this.typeh;
     data['prenom'] = this.prenom;
     data['email'] = this.email;
     data['telephone'] = this.telephone;

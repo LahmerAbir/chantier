@@ -15,7 +15,7 @@ class FactureApi {
     dio.options.headers['authorization'] = "Bearer ${token}";
 
     try {
-      return await dio.get(Config.baseUrl + '/factures', data: {}).catchError((
+      return await dio.get(Config.baseUrl + '/factures?page=1&limit=50', data: {}).catchError((
         onError,
       ) {
         print("exceeeppttion factures $onError");

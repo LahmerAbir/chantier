@@ -247,11 +247,16 @@ class MaterielForm extends StatelessWidget {
                 decoration: const InputDecoration(labelText: 'matricule'),
               ),
 
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.type,
-                decoration: const InputDecoration(labelText: 'Type'),
-              ),
+              DropdownFieldBlocBuilder<String>(
+                selectFieldBloc: formBloc.type,
+                decoration: InputDecoration(
+                  labelText: 'Type',
+                ),
+                itemBuilder: (context, value) => FieldItem(
+                  child: Text(value),
+                ),
 
+              ),
               TextFieldBlocBuilder(
                 textFieldBloc: formBloc.coutLocationJournalier,
                 decoration: const InputDecoration(labelText: 'Coût Journalier'),

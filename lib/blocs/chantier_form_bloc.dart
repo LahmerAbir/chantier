@@ -44,13 +44,18 @@ class ChantierFormBloc extends FormBloc<String, String> {
   final ressourcesAssigned = InputFieldBloc<List<RessourceBase>, dynamic>(
     initialValue: [],
   );
+  final SelectFieldBloc<Homme, dynamic> chefProjet = SelectFieldBloc<Homme, dynamic>(
+    validators: [FieldBlocValidators.required],
+  );
   List<Homme> hommes = [];
   List<Materiel> materiels = [];
   List<Camion> camions = [];
+  List<Homme> tousLesHommes = [];
 
   ChantierFormBloc({
     Chantier? initialChantier,
     List<Client> availableClients = const [],
+    List<Homme> tousLesHommes = const [],
   }) : chantierId = initialChantier?.id {
     addFieldBlocs(
       fieldBlocs: [
@@ -61,17 +66,21 @@ class ChantierFormBloc extends FormBloc<String, String> {
         status,
         dateDebut,
         dateFin,
+        chefProjet,
         hommesAssigned,
         materielAssigned,
         ressourcesAssigned,
       ],
     );
+    final chefs = tousLesHommes.where((h) => h.typeh == 'chef projet').toList();
+    chefProjet.updateItems(chefs);
     if (initialChantier != null) {
       nomChantier.updateValue(initialChantier.nom ?? '');
       budget.updateValue(initialChantier.total.toString());
       description.updateValue(initialChantier.description ?? "");
       status.updateValue(initialChantier.status ?? '');
       if (initialChantier.clientId != null) {
+
         try {
           print('availableClients ${availableClients.length}');
           final selectedClient = availableClients.firstWhere(
@@ -120,7 +129,7 @@ class ChantierFormBloc extends FormBloc<String, String> {
         var res = await ChantierRepository().editChantiers(
           id: chantierId,
           nom: nomChantier.value,
-          owner: client.value?.nom ?? "",
+          owner: chefProjet.value?.nom ?? "",
           description: description.value ?? "",
           adresse: nomChantier.value,
           date_emission: dateD,
@@ -142,7 +151,7 @@ class ChantierFormBloc extends FormBloc<String, String> {
       } else {
         var res = await ChantierRepository().addChantiers(
           nom: nomChantier.value,
-          owner: client.value?.nom ?? "",
+          owner: chefProjet.value?.nom ?? "",
 
           adresse: nomChantier.value,
           description: description.value,
