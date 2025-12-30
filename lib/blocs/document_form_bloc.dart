@@ -73,14 +73,18 @@ class DocumentFormBloc extends FormBloc<String, String> {
   // Liste dynamique pour les factures déjà émises
   final ListFieldBloc<FactureInfoFieldBloc, dynamic> facturesEmises =
       ListFieldBloc();
-
+  final postesEA = ListFieldBloc<PosteEAFieldBloc, dynamic>(name: 'postesEA');
   DocumentFormBloc({
     Facture? initialFacture,
     List<Client> availableClients = const [],
   }) : factureId = initialFacture?.id {
     addFieldBlocs(
-      fieldBlocs: [type, date, client, status, articlesListState, notes],
+      fieldBlocs: [type, date, client, status, articlesListState, notes ,],
     );
+    postesEA.stream.listen((state) {
+      recalculerTotalB();
+    });
+
     final randomNum = Random().nextInt(10000).toString().padLeft(4, '0');
     numCommande.updateInitialValue("EA-$randomNum");
     type.onValueChanges(
@@ -95,6 +99,7 @@ class DocumentFormBloc extends FormBloc<String, String> {
               retenueRetard,
               avancementCumule,
               facturesEmises,
+              postesEA
             ],
           );
         } else {
@@ -107,6 +112,7 @@ class DocumentFormBloc extends FormBloc<String, String> {
               retenueRetard,
               avancementCumule,
               facturesEmises,
+              postesEA
             ],
           );
         }
@@ -149,6 +155,20 @@ class DocumentFormBloc extends FormBloc<String, String> {
     articleBlocs.add(newArticleBloc);
     _listenToArticleBloc(newArticleBloc);
     _updateFormState();
+  }
+  void recalculerTotalB() {
+    double totalGeneralB = 0.0;
+
+    for (var poste in postesEA.value) {
+      double prec = double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ?? 0.0;
+      double actu = double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ?? 0.0;
+      double pu = double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ?? 0.0;
+
+      totalGeneralB += (prec + actu) * pu;
+    }
+
+    // Mise à jour du champ sans déclencher une boucle infinie
+    avancementCumule.updateValue(totalGeneralB.toStringAsFixed(2));
   }
 
   void removeArticleAt(int index) {
@@ -325,9 +345,49 @@ class FactureInfoFieldBloc extends GroupFieldBloc {
         validators: [FieldBlocValidators.required],
       ),
       montantHTVA: TextFieldBloc(
-        initialValue: '0.0',
+       // initialValue: '0.0',
         validators: [FieldBlocValidators.required],
       ),
+    );
+  }
+}
+
+class PosteEAFieldBloc extends GroupFieldBloc {
+  final TextFieldBloc designation;
+  final TextFieldBloc unite;
+  final TextFieldBloc qteTotale;
+  final TextFieldBloc prixUnitaire;
+  final TextFieldBloc qtePrecedente;
+  final TextFieldBloc qteActuelle;
+
+  PosteEAFieldBloc._({
+    required String name,
+    required this.designation,
+    required this.unite,
+    required this.qteTotale,
+    required this.prixUnitaire,
+    required this.qtePrecedente,
+    required this.qteActuelle,
+    required List<FieldBloc> fields,
+  }) : super(name: name, fieldBlocs: fields);
+
+  factory PosteEAFieldBloc.create(String name) {
+    final d = TextFieldBloc(name: 'designation');
+    final u = TextFieldBloc(name: 'unite', initialValue: 'm²');
+    final qt = TextFieldBloc(name: 'qteTotale', initialValue: '0');
+    final pu = TextFieldBloc(name: 'prixUnitaire', initialValue: '0');
+    final qp = TextFieldBloc(name: 'qtePrecedente', initialValue: '0');
+    final qa = TextFieldBloc(name: 'qteActuelle', initialValue: '0');
+
+    return PosteEAFieldBloc._(
+      name: name,
+      designation: d,
+      unite: u,
+      qteTotale: qt,
+      prixUnitaire: pu,
+      qtePrecedente: qp,
+      qteActuelle: qa,
+      fields: [d, u, qt, pu, qp, qa],
     );
   }
 }

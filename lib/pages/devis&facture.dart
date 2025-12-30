@@ -360,17 +360,13 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(state.successResponse ?? "")),
                       );
-                      if(docFormBloc.type.value == "EA")
-                        {
-                          print("pdf EA");
-
-
-                        }else {
+                      if (docFormBloc.type.value == "EA") {
+                        print("pdf EA");
+                      } else {
                         if (widget.factureToEdit != null) {
-                          ScaffoldMessenger.of(context)
-                            ..showSnackBar(
-                              SnackBar(content: Text(state.successResponse!)),
-                            );
+                          ScaffoldMessenger.of(context)..showSnackBar(
+                            SnackBar(content: Text(state.successResponse!)),
+                          );
                           Navigator.of(context).pop(true);
                         } else {
                           final List<Article> finalArticles = docFormBloc
@@ -467,24 +463,26 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                             bloc: docFormBloc.type,
                             builder: (context, state) {
                               if (state.value == 'EA') {
-                                return _buildEASection(
-                                  context,
-                                  docFormBloc,
+                                return Column(
+                                  children: [
+                                    _buildEASection(context, docFormBloc),
+                                    const SizedBox(height: 30),
+                                    _buildDetailsTab(docFormBloc),
+                                  ],
                                 );
                               }
                               return SizedBox(
-                                height:   MediaQuery.of(context).size.height * 0.85 ,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.85,
 
-                                width: MediaQuery.of(context).size.width ,
+                                width: MediaQuery.of(context).size.width,
 
                                 child: Column(
                                   children: [
                                     const SizedBox(width: 15),
                                     SizedBox(
                                       height: 100,
-                                      width: MediaQuery.of(
-                                        context,
-                                      ).size.width,
+                                      width: MediaQuery.of(context).size.width,
                                       child: _buildStatusField(
                                         context,
                                         docFormBloc,
@@ -501,14 +499,10 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
-                                    _buildArticleList(
-                                      context,
-                                      docFormBloc,
-                                    ),
+                                    _buildArticleList(context, docFormBloc),
 
                                     Expanded(
                                       child: _buildTextField(
-
                                         docFormBloc.notes,
                                         "Notes",
                                         "Ecrire ...",
@@ -538,8 +532,12 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed:() async {
-                                if(docFormBloc.type.value == "EA" ) await generateEAPdf(docFormBloc); else docFormBloc.submit();},
+                              onPressed: () async {
+                                if (docFormBloc.type.value == "EA")
+                                  await generateEAPdf(docFormBloc);
+                                else
+                                  docFormBloc.submit();
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue.shade700,
                                 shape: RoundedRectangleBorder(
@@ -561,6 +559,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
             ),
           );
   }
+
   Future<void> generateEAPdf(DocumentFormBloc formBloc) async {
     final pdf = pw.Document();
 
@@ -568,10 +567,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
     final fontBold = await PdfGoogleFonts.robotoBold();
 
     // On crée un thème qui applique ces polices à tout le document
-    final theme = pw.ThemeData.withFont(
-      base: font,
-      bold: fontBold,
-    );
+    final theme = pw.ThemeData.withFont(base: font, bold: fontBold);
 
     // Calculs (utilisez tryParse pour éviter les crashs si un champ est vide)
     double A = double.tryParse(formBloc.totalCommandeBase.value) ?? 0.0;
@@ -581,26 +577,26 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
 
     double E = formBloc.facturesEmises.value.fold(
       0.0,
-          (sum, item) => sum + (double.tryParse(item.montantHTVA.value) ?? 0.0),
+      (sum, item) => sum + (double.tryParse(item.montantHTVA.value) ?? 0.0),
     );
 
     double montantMarche = A + G;
     double soldeBase = A + G - B; // Formule (A)+(G)-(B) de l'image
     double cumuleAFacturer = B + C; // (D) = (B) + somme(C)
 
-
     double aFacturerMaintenant = cumuleAFacturer - E; // (F) = (D) - (E)
-    String dateDuJour = DateFormat('dd/MM/yyyy').format(formBloc.date.value ?? DateTime.now());
+    String dateDuJour = DateFormat(
+      'dd/MM/yyyy',
+    ).format(formBloc.date.value ?? DateTime.now());
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        theme:  theme,
+        theme: theme,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Align(
-
                 alignment: pw.Alignment.topRight,
                 child: pw.Text("Date ${dateDuJour}"),
               ),
@@ -627,10 +623,22 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                     child: pw.Table(
                       border: pw.TableBorder.all(),
                       children: [
-                        _buildSimpleRow("Client", formBloc.client.value?.nom?.toUpperCase() ?? ""),
-                        _buildSimpleRow("Adresse", formBloc.client.value?.adresse ?? ""),
-                        _buildSimpleRow("Tel", formBloc.client.value?.telephone ?? ""),
-                        _buildSimpleRow("Email", formBloc.client.value?.email ?? ""),
+                        _buildSimpleRow(
+                          "Client",
+                          formBloc.client.value?.nom?.toUpperCase() ?? "",
+                        ),
+                        _buildSimpleRow(
+                          "Adresse",
+                          formBloc.client.value?.adresse ?? "",
+                        ),
+                        _buildSimpleRow(
+                          "Tel",
+                          formBloc.client.value?.telephone ?? "",
+                        ),
+                        _buildSimpleRow(
+                          "Email",
+                          formBloc.client.value?.email ?? "",
+                        ),
                       ],
                     ),
                   ),
@@ -659,7 +667,6 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                       ),
                     ),
                   ),
-
                 ],
               ),
 
@@ -708,7 +715,16 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
               ),
 
               pw.SizedBox(height: 20),
-              pw.Text("Détails des factures émises :"),
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  "Détails des factures émises :",
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
               pw.Table(
                 border: pw.TableBorder.all(),
                 children: [
@@ -735,9 +751,116 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                 ],
               ),
 
+              pw.SizedBox(height: 30),
+
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  "Détails de l'avancement par poste",
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 10),
+
+              pw.Table(
+                border: pw.TableBorder.all(width: 0.5),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3),
+                  // Colonne Désignation plus large
+                },
+                children: [
+                  // --- EN-TÊTE DU TABLEAU ---
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                    ),
+                    children: [
+                      _cell("Désignation", isBold: true),
+                      _cell("Unité", isBold: true),
+                      _cell("Qté Tot.", isBold: true),
+                      _cell("Préc.", isBold: true),
+                      _cell("Actuel", isBold: true),
+                      _cell("Cumul", isBold: true),
+                      _cell("Reste", isBold: true),
+                      _cell("P.U. (€)", isBold: true),
+                      _cell("Total HT", isBold: true),
+                    ],
+                  ),
+
+                  // --- LIGNES DE POSTES DYNAMIQUES ---
+                  ...formBloc.postesEA.value.map((poste) {
+                    // On nettoie les valeurs pour le calcul
+                    double total =
+                        double.tryParse(
+                          poste.qteTotale.value.replaceFirst(',', '.'),
+                        ) ??
+                        0.0;
+                    double prec =
+                        double.tryParse(
+                          poste.qtePrecedente.value.replaceFirst(',', '.'),
+                        ) ??
+                        0.0;
+                    double actu =
+                        double.tryParse(
+                          poste.qteActuelle.value.replaceFirst(',', '.'),
+                        ) ??
+                        0.0;
+                    double pu =
+                        double.tryParse(
+                          poste.prixUnitaire.value.replaceFirst(',', '.'),
+                        ) ??
+                        0.0;
+
+                    double cumul = prec + actu;
+                    double reste = total - cumul;
+                    double totalHT = cumul * pu;
+
+                    return pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(
+                            poste.designation.value,
+                            style: const pw.TextStyle(fontSize: 8),
+                          ),
+                        ),
+                        _cell(poste.unite.value),
+                        _cell(total.toStringAsFixed(2)),
+                        _cell(prec.toStringAsFixed(2)),
+                        _cell(
+                          actu.toStringAsFixed(2),
+                          color: PdfColors.blue700,
+                        ),
+                        _cell(cumul.toStringAsFixed(2), isBold: true),
+                        _cell(
+                          reste.toStringAsFixed(2),
+                          color: reste < 0 ? PdfColors.red : PdfColors.black,
+                        ),
+                        _cell(pu.toStringAsFixed(2)),
+                        _cell(totalHT.toStringAsFixed(2), isBold: true),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+
+              // --- TOTAL FINAL EN BAS DE PAGE 2 ---
+              pw.Container(
+                alignment: pw.Alignment.centerRight,
+                padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                child: pw.Text(
+                  "MONTANT TOTAL CUMULÉ (B) : ${formBloc.avancementCumule.value} €",
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
               pw.Spacer(),
 
-              // --- LIGNE FINALE : A FACTURER ---
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.end,
                 children: [
@@ -772,17 +895,30 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
               ),
             ],
           );
-
-
-
-
-
-
         },
       ),
     );
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
 
+  pw.Widget _cell(
+    String text, {
+    bool isBold = false,
+    PdfColor color = PdfColors.black,
+    double fontSize = 8,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(4),
+      child: pw.Text(
+        text,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          fontSize: fontSize,
+          fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color,
+        ),
+      ),
+    );
   }
 
   // Helpers pour le style du tableau
@@ -870,13 +1006,11 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
   Widget _buildEASection(BuildContext context, DocumentFormBloc formBloc) {
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.5,
-      width: MediaQuery.of(context).size.width * 0.6,
+      width: MediaQuery.of(context).size.width,
 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-
           Row(
             children: [
               Expanded(
@@ -953,7 +1087,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
           const SizedBox(height: 20),
           const Text(
             "Factures déjà émises (E)",
-            style: TextStyle(fontWeight: FontWeight.bold , color: Colors.black),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
           ),
 
           BlocBuilder<
@@ -963,16 +1097,13 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
             bloc: formBloc.facturesEmises,
             builder: (context, state) {
               if (state.fieldBlocs.isEmpty) {
-                return Text(
-                  "Aucune facture émise",
-                );
+                return Text("Aucune facture émise");
               }
 
               return SizedBox(
                 height: 200,
 
                 child: SingleChildScrollView(
-
                   child: Column(
                     children: state.fieldBlocs.asMap().entries.map((entry) {
                       final index = entry.key;
@@ -982,7 +1113,9 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                           Expanded(
                             child: TextFieldBlocBuilder(
                               textFieldBloc: fieldBloc.numFacture,
-                              decoration: InputDecoration(labelText: 'N° Facture'),
+                              decoration: InputDecoration(
+                                labelText: 'N° Facture',
+                              ),
                             ),
                           ),
                           SizedBox(width: 10),
@@ -997,8 +1130,8 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                           ),
                           IconButton(
                             icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () =>
-                                formBloc.facturesEmises.removeFieldBlocAt(index),
+                            onPressed: () => formBloc.facturesEmises
+                                .removeFieldBlocAt(index),
                           ),
                         ],
                       );
@@ -1008,7 +1141,6 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
               );
             },
           ),
-
           TextButton.icon(
             onPressed: () {
               final uniqueName =
@@ -1021,6 +1153,272 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
             label: const Text('Ajouter une facture émise'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsTab(DocumentFormBloc formBloc) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.35,
+      width: MediaQuery.of(context).size.width,
+      child: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTableHeader(),
+                    const Divider(),
+                    Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: 200,
+
+                      child:
+                          BlocBuilder<
+                            ListFieldBloc<PosteEAFieldBloc, dynamic>,
+                            ListFieldBlocState<PosteEAFieldBloc, dynamic>
+                          >(
+                            bloc: formBloc.postesEA,
+                            builder: (context, state) {
+                              if (state.fieldBlocs.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Text(
+                                    "Aucun poste ajouté. Cliquez sur le bouton '+' pour commencer.",
+                                  ),
+                                );
+                              }
+                              return SingleChildScrollView(
+                                child: Column(
+                                  children: state.fieldBlocs
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                        final index = entry.key;
+                                        final poste = entry.value;
+                                        return _buildPosteRow(
+                                          poste,
+                                          formBloc,
+                                          index,
+                                        );
+                                      })
+                                      .toList(),
+                                ),
+                              );
+                            },
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: Colors.grey[200],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // On crée un nom unique pour le nouveau groupe
+                    final uniqueName =
+                        'poste_${DateTime.now().millisecondsSinceEpoch}';
+                    formBloc.postesEA.addFieldBloc(
+                      PosteEAFieldBloc.create(uniqueName),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text("Ajouter un Poste"),
+                ),
+                // Affichage du total en temps réel en bas du tableau
+                BlocBuilder<TextFieldBloc, TextFieldBlocState>(
+                  bloc: formBloc.avancementCumule,
+                  builder: (context, state) => Text(
+                    "Total (B) : ${state.value} €",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Header du tableau
+  Widget _buildTableHeader() {
+    return Row(
+      children: const [
+        SizedBox(
+          width: 400,
+          child: Text(
+            "Désignation",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        SizedBox(width: 80, child: Text("Unité", textAlign: TextAlign.center)),
+        SizedBox(
+          width: 100,
+          child: Text("Qté Tot.", textAlign: TextAlign.center),
+        ),
+        SizedBox(width: 100, child: Text("Préc.", textAlign: TextAlign.center)),
+        SizedBox(
+          width: 100,
+          child: Text("Actuel", textAlign: TextAlign.center),
+        ),
+        SizedBox(width: 100, child: Text("Cumul", textAlign: TextAlign.center)),
+        SizedBox(width: 100, child: Text("Reste", textAlign: TextAlign.center)),
+        SizedBox(width: 100, child: Text("P.U.", textAlign: TextAlign.center)),
+        SizedBox(width: 50),
+      ],
+    );
+  }
+
+  Widget _buildPosteRow(
+    PosteEAFieldBloc poste,
+    DocumentFormBloc formBloc,
+    int index,
+  ) {
+    // On utilise un StatefulBuilder pour avoir accès à "setState" localement
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // Calculs frais à chaque "setState"
+        double total =
+            double.tryParse(poste.qteTotale.value.replaceFirst(',', '.')) ??
+            0.0;
+        double prec =
+            double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ??
+            0.0;
+        double actu =
+            double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ??
+            0.0;
+        double pu =
+            double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ??
+            0.0;
+
+        double cumul = prec + actu;
+        double reste = total - cumul;
+        double montantLigne = cumul * pu;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 400,
+                child: TextFieldBlocBuilder(textFieldBloc: poste.designation),
+              ),
+              SizedBox(
+                width: 80,
+                child: TextFieldBlocBuilder(textFieldBloc: poste.unite),
+              ),
+
+              // CHAMPS DE SAISIE AVEC APPEL À setState
+              SizedBox(
+                width: 100,
+                child: _numericField(poste.qteTotale, formBloc, setState),
+              ),
+              SizedBox(
+                width: 100,
+                child: _numericField(poste.qtePrecedente, formBloc, setState),
+              ),
+              SizedBox(
+                width: 100,
+                child: _numericField(poste.qteActuelle, formBloc, setState),
+              ),
+
+              // AFFICHAGE CUMUL
+              SizedBox(
+                width: 100,
+                child: Center(
+                  child: Text(
+                    cumul.toStringAsFixed(2),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
+
+              // AFFICHAGE RESTE
+              SizedBox(
+                width: 100,
+                child: Center(
+                  child: Text(
+                    reste.toStringAsFixed(2),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: reste < 0 ? Colors.red : Colors.green,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(
+                width: 100,
+                child: _numericField(poste.prixUnitaire, formBloc, setState),
+              ),
+
+              // AFFICHAGE TOTAL LIGNE €
+              SizedBox(
+                width: 100,
+                child: Center(
+                  child: Text(
+                    montantLigne.toStringAsFixed(2) + " €",
+                    style: TextStyle(fontSize: 10),
+                  ),
+                ),
+              ),
+
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => formBloc.postesEA.removeFieldBlocAt(index),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _numericField(
+    TextFieldBloc bloc,
+    DocumentFormBloc formBloc,
+    StateSetter setState,
+  ) {
+    return TextFieldBlocBuilder(
+      textFieldBloc: bloc,
+      // keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      // decoration: const InputDecoration(isDense: true),
+      onChanged: (val) {
+        // 1. On force le widget local à se redessiner pour le Cumul/Reste
+        setState(() {});
+        // 2. On demande au bloc de recalculer le montant (B) global
+        formBloc.recalculerTotalB();
+      },
+    );
+  }
+
+  Widget _buildCalculatedCell(
+    PosteEAFieldBloc poste,
+    double Function(PosteEAFieldBloc) calc,
+  ) {
+    return Container(
+      alignment: Alignment.center,
+      child: Text(
+        calc(poste).toStringAsFixed(2),
+        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
       ),
     );
   }
