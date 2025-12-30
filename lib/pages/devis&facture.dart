@@ -467,7 +467,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                                   children: [
                                     _buildEASection(context, docFormBloc),
                                     const SizedBox(height: 30),
-                                    _buildDetailsTab(docFormBloc),
+                                  isMobile ? _buildDetailsTab_Mobile(docFormBloc) :  _buildDetailsTab(docFormBloc),
                                   ],
                                 );
                               }
@@ -559,7 +559,137 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
             ),
           );
   }
+  Widget _buildDetailsTab_Mobile(DocumentFormBloc formBloc) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.35,
+      width: MediaQuery.of(context).size.width,
+      child: BlocBuilder<ListFieldBloc<PosteEAFieldBloc, dynamic>, ListFieldBlocState<PosteEAFieldBloc, dynamic>>(
+        bloc: formBloc.postesEA,
+        builder: (context, state) {
+          return Column(
+            children: [
+              // Résumé rapide en haut
+              Container(
+                color: Colors.blueGrey[50],
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Postes: ${state.fieldBlocs.length}", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text("Total (B): ${formBloc.avancementCumule.value} €", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[800])),
+                  ],
+                ),
+              ),
 
+              // Liste des postes
+              Expanded(
+                child: state.fieldBlocs.isEmpty
+                    ? Center(child: Text("Aucun poste. Cliquez sur +"))
+                    : ListView.builder(
+                  itemCount: state.fieldBlocs.length,
+                  itemBuilder: (context, index) => _buildMobilePosteCard(state.fieldBlocs[index], formBloc, index),
+                ),
+              ),
+
+              // Bouton d'ajout flottant ou fixe
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => formBloc.postesEA.addFieldBloc(PosteEAFieldBloc.create('p_${DateTime.now().millisecond}')),
+                  icon: const Icon(Icons.add),
+                  label: const Text("AJOUTER UN POSTE"),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMobilePosteCard(PosteEAFieldBloc poste, DocumentFormBloc formBloc, int index) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // Calculs
+        double total = double.tryParse(poste.qteTotale.value.replaceFirst(',', '.')) ?? 0.0;
+        double prec = double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ?? 0.0;
+        double actu = double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ?? 0.0;
+        double pu = double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ?? 0.0;
+        double cumul = prec + actu;
+        double reste = total - cumul;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          elevation: 2,
+          child: ExpansionTile(
+            leading: CircleAvatar(child: Text("${index + 1}")),
+            title: TextFieldBlocBuilder(
+              textFieldBloc: poste.designation,
+              decoration: const InputDecoration(labelText: "Désignation", border: InputBorder.none),
+            ),
+            subtitle: Text("Cumul: $cumul / Reste: $reste",
+                style: TextStyle(color: reste < 0 ? Colors.red : Colors.green, fontSize: 12)),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: _numericInput_Mobile(poste.unite, "Unité", formBloc, setState, isText: true)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _numericInput_Mobile(poste.qteTotale, "Qté Totale", formBloc, setState)),
+                      ],
+                    ),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Expanded(child: _numericInput_Mobile(poste.qtePrecedente, "Précédent", formBloc, setState)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _numericInput_Mobile(poste.qteActuelle, "Actuel", formBloc, setState, highlight: true)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _numericInput_Mobile(poste.prixUnitaire, "Prix Unitaire (€)", formBloc, setState),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Total HT: ${(cumul * pu).toStringAsFixed(2)} €", style: TextStyle(fontWeight: FontWeight.bold)),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => formBloc.postesEA.removeFieldBlocAt(index),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _numericInput_Mobile(TextFieldBloc bloc, String label, DocumentFormBloc formBloc, StateSetter setState, {bool highlight = false, bool isText = false}) {
+    return TextFieldBlocBuilder(
+      textFieldBloc: bloc,
+      keyboardType: isText ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        filled: highlight,
+        fillColor: highlight ? Colors.blue[50] : null,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      ),
+      onChanged: (_) {
+        setState(() {});
+        formBloc.recalculerTotalB();
+      },
+    );
+  }
   Future<void> generateEAPdf(DocumentFormBloc formBloc) async {
     final pdf = pw.Document();
 
