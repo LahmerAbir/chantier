@@ -12,6 +12,9 @@ import '../model/client.dart';
 import '../model/document.dart';
 import '../ui/common/loading_dialog.dart';
 import '../utils/utils.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class DocumentsPage extends StatefulWidget {
   const DocumentsPage({super.key});
@@ -25,9 +28,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
 
   void _openAddDocumentScreen() {
     Navigator.of(context)
-        .push(
-          MaterialPageRoute(builder: (context) =>  NewDocumentScreen()),
-        )
+        .push(MaterialPageRoute(builder: (context) => NewDocumentScreen()))
         .then((_) => setState(() {}));
   }
 
@@ -42,7 +43,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
     if (result == true) {
       setState(() {
         isLoading = true;
-
       });
       try {
         documents = await FactureRepository().getFactures() ?? [];
@@ -57,6 +57,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
       } // Rafraîchir la liste après modification
     }
   }
+
   bool isLoading = true;
 
   @override
@@ -126,7 +127,9 @@ class _DocumentsPageState extends State<DocumentsPage> {
               : documents.isNotEmpty
               ? SizedBox(
                   width: MediaQuery.of(context).size.width * 0.9,
-            height: isMobile ?  MediaQuery.of(context).size.height * 0.6 : MediaQuery.of(context).size.height * 0.8,
+                  height: isMobile
+                      ? MediaQuery.of(context).size.height * 0.6
+                      : MediaQuery.of(context).size.height * 0.8,
                   child: Scrollbar(
                     controller: scrollController,
                     thumbVisibility: true,
@@ -153,7 +156,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                     ),
                                   ),
                                 ),
-                               /* DataColumn(
+                                /* DataColumn(
                                   label: Text(
                                     'Client',
                                     style: TextStyle(
@@ -210,7 +213,9 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                     //DataCell(Text(doc.client)),
                                     DataCell(Text(doc.date ?? "")),
                                     DataCell(
-                                      Text("${Utils.formatNumber(doc.totalTtc ?? 0)}"),
+                                      Text(
+                                        "${Utils.formatNumber(doc.totalTtc ?? 0)}",
+                                      ),
                                     ),
                                     DataCell(
                                       Container(
@@ -246,7 +251,8 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                               color: Colors.blue.shade700,
                                               size: 20,
                                             ),
-                                            onPressed: () => _navigateToEdit(doc),
+                                            onPressed: () =>
+                                                _navigateToEdit(doc),
                                             tooltip: 'Modifier',
                                           ),
                                           IconButton(
@@ -281,7 +287,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
 }
 
 class NewDocumentScreen extends StatefulWidget {
-   NewDocumentScreen({Key? key , this.factureToEdit}) : super(key: key);
+  NewDocumentScreen({Key? key, this.factureToEdit}) : super(key: key);
   final Facture? factureToEdit;
 
   @override
@@ -293,9 +299,8 @@ bool isMobile =
     defaultTargetPlatform == TargetPlatform.iOS;
 
 class _NewDocumentScreenState extends State<NewDocumentScreen> {
-
   List<Client> clients = [];
-  bool  isLoading = true;
+  bool isLoading = true;
 
   @override
   initState() {
@@ -315,200 +320,703 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
-    return isLoading ? Loader() :BlocProvider(
-      create: (context) => DocumentFormBloc(initialFacture: widget.factureToEdit , availableClients: clients ),
-
-      child: Builder(
-        builder: (context) {
-          final docFormBloc = context.read<DocumentFormBloc>();
-          docFormBloc.client.updateItems(clients);
-
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text("Créer Document"),
-              backgroundColor: Colors.white,
-              elevation: 0,
+    return isLoading
+        ? Loader()
+        : BlocProvider(
+            create: (context) => DocumentFormBloc(
+              initialFacture: widget.factureToEdit,
+              availableClients: clients,
             ),
-            body: FormBlocListener<DocumentFormBloc, String, String>(
-              onSubmitting: (context, state) {
-                LoadingDialog.show(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Soumission en cours...')),
+
+            child: Builder(
+              builder: (context) {
+                final docFormBloc = context.read<DocumentFormBloc>();
+                docFormBloc.client.updateItems(clients);
+
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text("Créer Document"),
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  body: FormBlocListener<DocumentFormBloc, String, String>(
+                    onSubmitting: (context, state) {
+                      LoadingDialog.show(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Soumission en cours...')),
+                      );
+                    },
+                    onDeleting: (context, state) {
+                      LoadingDialog.hide(context);
+                      setState(() {
+                        print("set stateeee");
+                      });
+                    },
+                    onSuccess: (context, state) async {
+                      LoadingDialog.hide(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.successResponse ?? "")),
+                      );
+                      if(docFormBloc.type.value == "EA")
+                        {
+                          print("pdf EA");
+
+
+                        }else {
+                        if (widget.factureToEdit != null) {
+                          ScaffoldMessenger.of(context)
+                            ..showSnackBar(
+                              SnackBar(content: Text(state.successResponse!)),
+                            );
+                          Navigator.of(context).pop(true);
+                        } else {
+                          final List<Article> finalArticles = docFormBloc
+                              .articleBlocs
+                              .map((bloc) => bloc.articleData)
+                              .toList();
+                          int totalTTC = 0;
+                          int totalHT = 0;
+
+                          for (var e in finalArticles) {
+                            totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
+                          }
+                          totalTTC = totalHT;
+                          final Facture newDocument = Facture(
+                            notes: docFormBloc.notes.value ?? "",
+
+                            client: docFormBloc.client.value,
+                            clientId: docFormBloc.client.value?.id ?? 1,
+                            reference: state.successResponse,
+                            date: docFormBloc.date.value.toString() ?? "",
+                            totalTtc: totalTTC,
+                            totalHt: totalHT,
+                            status: docFormBloc.status.value ?? "",
+                            articles: finalArticles, // Placeholder
+                          );
+
+                          // Ouvre la page d'aperçu PDF
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PdfPreviewPage(document: newDocument),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    onFailure: (context, state) {
+                      LoadingDialog.hide(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.failureResponse!)),
+                      );
+                    },
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Informations Générales",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          Row(
+                            children: [
+                              Expanded(child: _buildTypeField(context)),
+                              const SizedBox(width: 15),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            children: [
+                              Expanded(child: _buildDateField(context)),
+                              const SizedBox(width: 15),
+
+                              isLoading
+                                  ? Loader()
+                                  : Expanded(
+                                      child: DropdownFieldBlocBuilder<Client>(
+                                        selectFieldBloc: docFormBloc.client,
+                                        itemBuilder: (context, client) =>
+                                            FieldItem(
+                                              child: Text(
+                                                client.nom ?? 'Client sans nom',
+                                              ),
+                                            ),
+
+                                        decoration: const InputDecoration(
+                                          labelText: 'Client',
+                                          hintText: 'Sélectionnez le client',
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.85,
+
+                            width: MediaQuery.of(context).size.width ,
+                            child:
+                                BlocBuilder<
+                                  SelectFieldBloc<String, dynamic>,
+                                  SelectFieldBlocState<String, dynamic>
+                                >(
+                                  bloc: docFormBloc.type,
+                                  builder: (context, state) {
+                                    if (state.value == 'EA') {
+                                      return _buildEASection(
+                                        context,
+                                        docFormBloc,
+                                      );
+                                    }
+                                    return SizedBox(
+                                      width: MediaQuery.of(context).size.width,
+                                      child: Column(
+                                        children: [
+                                          const SizedBox(width: 15),
+                                          SizedBox(
+                                            height: 100,
+                                            width: MediaQuery.of(
+                                              context,
+                                            ).size.width,
+                                            child: _buildStatusField(
+                                              context,
+                                              docFormBloc,
+                                            ),
+                                          ),
+
+                                          // Section Articles
+                                          const SizedBox(height: 30),
+                                          const Text(
+                                            "Liste des Articles",
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          _buildArticleList(
+                                            context,
+                                            docFormBloc,
+                                          ),
+
+                                          Expanded(
+                                            child: _buildTextField(
+
+                                              docFormBloc.notes,
+                                              "Notes",
+                                              "Ecrire ...",
+                                            ),
+                                          ),
+                                          // Section Totaux
+                                          const SizedBox(height: 30),
+                                          const Text(
+                                            "Totaux",
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          _buildTotals(context, docFormBloc),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                          ),
+                          const SizedBox(height: 15),
+
+                          // Bouton Soumettre
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed:() async {
+                                if(docFormBloc.type.value == "EA" ) await generateEAPdf(docFormBloc); else docFormBloc.submit();},
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                "Sauvegarder le Document",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
-              onDeleting: (context, state) {
-                LoadingDialog.hide(context);
-                setState(() {
-                  print("set stateeee");
-                });
-              },
-              onSuccess: (context, state) {
-                LoadingDialog.hide(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.successResponse!)));
-                if(widget.factureToEdit != null)
-                  {
-
-                    ScaffoldMessenger.of(context)..showSnackBar(
-                      SnackBar(content: Text(state.successResponse!)),
-                    );
-                    Navigator.of(context).pop(true);
-                  }else {
-                  final List<Article> finalArticles = docFormBloc.articleBlocs
-                      .map((bloc) => bloc.articleData)
-                      .toList();
-                  int totalTTC = 0;
-                  int totalHT = 0;
-
-                  for (var e in finalArticles) {
-                    totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
-                  }
-                  totalTTC = totalHT;
-                  final Facture newDocument = Facture(
-                    notes: docFormBloc.notes.value ?? "",
-
-                    client: docFormBloc.client.value,
-                    clientId: docFormBloc.client.value?.id ?? 1,
-                    reference: state.successResponse,
-                    date: docFormBloc.date.value.toString() ?? "",
-                    totalTtc: totalTTC,
-                    totalHt: totalHT,
-                    status: docFormBloc.status.value ?? "",
-                    articles: finalArticles, // Placeholder
-                  );
-
-                  // Ouvre la page d'aperçu PDF
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          PdfPreviewPage(document: newDocument),
-                    ),
-                  );
-                }
-              },
-              onFailure: (context, state) {
-                LoadingDialog.hide(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.failureResponse!)));
-              },
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Informations Générales",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Row(
-                      children: [
-                        Expanded(child: _buildTypeField(context)),
-                        const SizedBox(width: 15),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        Expanded(child: _buildDateField(context)),
-                        const SizedBox(width: 15),
-
-                        isLoading ? Loader() :  Expanded(
-                         child: DropdownFieldBlocBuilder<Client>(
-                                  selectFieldBloc: docFormBloc.client,
-                                  itemBuilder: (context, client) => FieldItem(
-                                    child: Text(client.nom ?? 'Client sans nom'),
-                                  ),
-
-
-                                  decoration: const InputDecoration(
-                                    labelText: 'Client',
-                                    hintText: 'Sélectionnez le client',
-                                  ),
-                                ),
-                       )
-
-
-                            // Si erreur ou état initial (non chargé)
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: _buildStatusField(context, docFormBloc),
-                        ),
-                      ],
-                    ),
-
-                    // Section Articles
-                    const SizedBox(height: 30),
-                    const Text(
-                      "Liste des Articles",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildArticleList(context, docFormBloc),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            docFormBloc.notes,
-                            "état d'avancement",
-                            "Ecrire ...",
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Section Totaux
-                    const SizedBox(height: 30),
-                    const Text(
-                      "Totaux",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildTotals(context, docFormBloc),
-
-                    // Bouton Soumettre
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: docFormBloc.submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade700,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          "Sauvegarder le Document",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           );
+  }
+  Future<void> generateEAPdf(DocumentFormBloc formBloc) async {
+    final pdf = pw.Document();
+
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+
+    // On crée un thème qui applique ces polices à tout le document
+    final theme = pw.ThemeData.withFont(
+      base: font,
+      bold: fontBold,
+    );
+
+    // Calculs (utilisez tryParse pour éviter les crashs si un champ est vide)
+    double A = double.tryParse(formBloc.totalCommandeBase.value) ?? 0.0;
+    double G = double.tryParse(formBloc.totalSupplements.value) ?? 0.0;
+    double B = double.tryParse(formBloc.avancementCumule.value) ?? 0.0;
+    double C = double.tryParse(formBloc.retenueRetard.value) ?? 0.0;
+
+    double E = formBloc.facturesEmises.value.fold(
+      0.0,
+          (sum, item) => sum + (double.tryParse(item.montantHTVA.value) ?? 0.0),
+    );
+
+    double montantMarche = A + G;
+    double soldeBase = A + G - B; // Formule (A)+(G)-(B) de l'image
+    double cumuleAFacturer = B + C; // (D) = (B) + somme(C)
+
+
+    double aFacturerMaintenant = cumuleAFacturer - E; // (F) = (D) - (E)
+    String dateDuJour = DateFormat('dd/MM/yyyy').format(formBloc.date.value ?? DateTime.now());
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        theme:  theme,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Align(
+
+                alignment: pw.Alignment.topRight,
+                child: pw.Text("Date ${dateDuJour}"),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Center(
+                child: pw.Text(
+                  "SYNTHESE D'ETAT D'AVANCEMENT",
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    decoration: pw.TextDecoration.underline,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // TABLEAU GAUCHE : INFOS CLIENT
+                  pw.Container(
+                    width: 250, // Un peu plus large pour l'adresse
+                    child: pw.Table(
+                      border: pw.TableBorder.all(),
+                      children: [
+                        _buildSimpleRow("Client", formBloc.client.value?.nom?.toUpperCase() ?? ""),
+                        _buildSimpleRow("Adresse", formBloc.client.value?.adresse ?? ""),
+                        _buildSimpleRow("Tel", formBloc.client.value?.telephone ?? ""),
+                        _buildSimpleRow("Email", formBloc.client.value?.email ?? ""),
+                      ],
+                    ),
+                  ),
+
+                  // TABLEAU DROITE : INFOS COMMANDE (Votre code existant)
+                  pw.Align(
+                    alignment: pw.Alignment.topRight,
+                    child: pw.Container(
+                      width: 200,
+                      child: pw.Table(
+                        border: pw.TableBorder.all(),
+                        children: [
+                          _buildSimpleRow(
+                            "Firme",
+                            formBloc.client.value?.nom ?? "",
+                          ),
+                          _buildSimpleRow(
+                            "N° de commande",
+                            formBloc.numCommande.value,
+                          ),
+                          _buildSimpleRow(
+                            "Période de l'EA",
+                            formBloc.periodeEA.value,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                ],
+              ),
+
+              pw.SizedBox(height: 30),
+
+              // --- Section Financière ---
+              _buildFinancialLine("Total commande =", A, "(A)"),
+              _buildFinancialLine("Total des suppléments =", G, "(G)"),
+              _buildFinancialLine(
+                "Etat d'avancement cumulé avec supplt =",
+                B,
+                "(B)",
+                isBold: true,
+              ),
+
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.start,
+                children: [
+                  pw.Text("Solde commande de base = "),
+                  _buildValueBox(soldeBase),
+                  pw.Text(" (A) + (G) - (B)", style: pw.TextStyle(fontSize: 8)),
+                ],
+              ),
+
+              pw.SizedBox(height: 20),
+              _buildFinancialLine(
+                "Retenue contractuelle pour retard",
+                C,
+                "(C)",
+              ),
+
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    "Cumulé à facturer = ",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  _buildValueBox(cumuleAFacturer),
+                  pw.Text(
+                    " (D) = (B) + somme (C)",
+                    style: pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 20),
+              pw.Text("Détails des factures émises :"),
+              pw.Table(
+                border: pw.TableBorder.all(),
+                children: [
+                  pw.TableRow(
+                    children: [
+                      pw.Text(" N° facture"),
+                      pw.Text(" Montant HTVA"),
+                    ],
+                  ),
+                  ...formBloc.facturesEmises.value.map(
+                    (f) => pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: pw.EdgeInsets.all(2),
+                          child: pw.Text(f.numFacture.value),
+                        ),
+                        pw.Padding(
+                          padding: pw.EdgeInsets.all(2),
+                          child: pw.Text("${f.montantHTVA.value} "),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.Spacer(),
+
+              // --- LIGNE FINALE : A FACTURER ---
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    "Total factures émises = ",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  _buildValueBox(E),
+                  pw.Text(" (E)", style: pw.TextStyle(fontSize: 8)),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    "A FACTURER = ",
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Container(
+                    padding: pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      "${aFacturerMaintenant.toStringAsFixed(2)} ",
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Text(" (F) = (D) - (E)", style: pw.TextStyle(fontSize: 8)),
+                ],
+              ),
+            ],
+          );
+
+
+
+
+
+
         },
+      ),
+    );
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+
+  }
+
+  // Helpers pour le style du tableau
+  pw.TableRow _buildSimpleRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(
+          padding: pw.EdgeInsets.all(4),
+          child: pw.Text(label, style: pw.TextStyle(fontSize: 9)),
+        ),
+        pw.Padding(
+          padding: pw.EdgeInsets.all(4),
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildValueBox(double value) {
+    return pw.Container(
+      width: 80,
+      margin: pw.EdgeInsets.symmetric(horizontal: 5),
+      padding: pw.EdgeInsets.all(2),
+      child: pw.Text(
+        "${value.toStringAsFixed(2)}",
+        textAlign: pw.TextAlign.right,
+      ),
+    );
+  }
+
+  pw.Widget _buildFinancialLine(
+    String label,
+    double value,
+    String index, {
+    bool isBold = false,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.end,
+        // Aligne tout vers la droite comme sur l'image
+        children: [
+          // Libellé de la ligne
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+            ),
+          ),
+          pw.SizedBox(width: 10),
+          // Boîte du montant
+          pw.Container(
+            width: 100,
+            padding: const pw.EdgeInsets.all(4),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.black, width: 1),
+            ),
+            child: pw.Text(
+              "${value.toStringAsFixed(2)} ",
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ),
+          // Indice de référence (A, G, B...)
+          pw.Container(
+            width: 25,
+            padding: const pw.EdgeInsets.only(left: 5),
+            child: pw.Text(
+              index,
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEASection(BuildContext context, DocumentFormBloc formBloc) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.6,
+      width: MediaQuery.of(context).size.width * 0.6,
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+
+          Row(
+            children: [
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.numCommande,
+                  isEnabled: false,
+                  decoration: const InputDecoration(labelText: 'N° Commande'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.periodeEA,
+                  decoration: const InputDecoration(
+                    labelText: 'Période de l\'EA ',
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.totalCommandeBase,
+                  decoration: const InputDecoration(
+                    labelText: 'Total Commande (A)',
+                    suffixText: '',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.totalSupplements,
+                  decoration: const InputDecoration(
+                    labelText: 'Suppléments (G)',
+                    suffixText: '',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.avancementCumule,
+                  decoration: const InputDecoration(
+                    labelText: 'Etat d\'avancement cumulé avec supplt (B)',
+                    suffixText: '',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: TextFieldBlocBuilder(
+                  textFieldBloc: formBloc.retenueRetard,
+                  decoration: const InputDecoration(
+                    labelText: 'Retenue contractuelle pour retard (C)',
+                    suffixText: '',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          const Text(
+            "Factures déjà émises (E)",
+            style: TextStyle(fontWeight: FontWeight.bold , color: Colors.black),
+          ),
+
+          BlocBuilder<
+            ListFieldBloc<FactureInfoFieldBloc, dynamic>,
+            ListFieldBlocState<FactureInfoFieldBloc, dynamic>
+          >(
+            bloc: formBloc.facturesEmises,
+            builder: (context, state) {
+              if (state.fieldBlocs.isEmpty) {
+                return Text(
+                  "Aucune facture émise",
+                );
+              }
+
+              return Column(
+                children: state.fieldBlocs.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final fieldBloc = entry.value;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: TextFieldBlocBuilder(
+                          textFieldBloc: fieldBloc.numFacture,
+                          decoration: InputDecoration(labelText: 'N° Facture'),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: TextFieldBlocBuilder(
+                          textFieldBloc: fieldBloc.montantHTVA,
+                          decoration: InputDecoration(
+                            labelText: 'Montant',
+                            suffixText: '€',
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () =>
+                            formBloc.facturesEmises.removeFieldBlocAt(index),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              );
+            },
+          ),
+
+          TextButton.icon(
+            onPressed: () {
+              final uniqueName =
+                  'facture_${DateTime.now().millisecondsSinceEpoch}';
+              formBloc.facturesEmises.addFieldBloc(
+                FactureInfoFieldBloc.create(uniqueName),
+              );
+            },
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Ajouter une facture émise'),
+          ),
+        ],
       ),
     );
   }
@@ -548,7 +1056,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         _buildLabel(label),
         TextFieldBlocBuilder(
           textFieldBloc: bloc,
-          maxLines: label == "état d'avancement" ? 4 : 1,
+          maxLines: label == "Notes" ? 4 : 1,
           decoration: _inputDecoration(hintText: hint),
           textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
         ),
@@ -774,7 +1282,3 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
     );
   }
 }
-
-
-
-
