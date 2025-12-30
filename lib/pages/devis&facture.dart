@@ -473,7 +473,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                               }
                               return SizedBox(
                                 height:
-                                    MediaQuery.of(context).size.height * 0.85,
+                                   isMobile ? MediaQuery.of(context).size.height  : MediaQuery.of(context).size.height * 0.85,
 
                                 width: MediaQuery.of(context).size.width,
 
@@ -490,7 +490,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                                     ),
 
                                     // Section Articles
-                                    const SizedBox(height: 30),
+                                    const SizedBox(height: 20),
                                     const Text(
                                       "Liste des Articles",
                                       style: TextStyle(
@@ -509,7 +509,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                                       ),
                                     ),
                                     // Section Totaux
-                                    const SizedBox(height: 30),
+                                    const SizedBox(height: 20),
                                     const Text(
                                       "Totaux",
                                       style: TextStyle(
@@ -1101,7 +1101,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
               }
 
               return SizedBox(
-                height: 200,
+                height:isMobile  ? 80 :  200,
 
                 child: SingleChildScrollView(
                   child: Column(
@@ -1176,7 +1176,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                     const Divider(),
                     Container(
                       width: MediaQuery.of(context).size.width,
-                      height: 200,
+                      height:isMobile  ? 80 :  200,
 
                       child:
                           BlocBuilder<
@@ -1241,9 +1241,9 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                   bloc: formBloc.avancementCumule,
                   builder: (context, state) => Text(
                     "Total (B) : ${state.value} €",
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: isMobile ? 12 : 18,
                     ),
                   ),
                 ),
@@ -1258,28 +1258,28 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
   // Header du tableau
   Widget _buildTableHeader() {
     return Row(
-      children: const [
+      children:  [
         SizedBox(
-          width: 400,
+          width: isMobile ? 50 :  400,
           child: Text(
             "Désignation",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
-        SizedBox(width: 80, child: Text("Unité", textAlign: TextAlign.center)),
+        SizedBox(width: isMobile ? 40 : 80, child: Text("Unité", textAlign: TextAlign.center)),
         SizedBox(
-          width: 100,
+          width: isMobile ? 40 : 100,
           child: Text("Qté Tot.", textAlign: TextAlign.center),
         ),
-        SizedBox(width: 100, child: Text("Préc.", textAlign: TextAlign.center)),
+        SizedBox(width: isMobile ? 40 : 100, child: Text("Préc.", textAlign: TextAlign.center)),
         SizedBox(
-          width: 100,
+          width: isMobile ? 40 :100,
           child: Text("Actuel", textAlign: TextAlign.center),
         ),
-        SizedBox(width: 100, child: Text("Cumul", textAlign: TextAlign.center)),
-        SizedBox(width: 100, child: Text("Reste", textAlign: TextAlign.center)),
-        SizedBox(width: 100, child: Text("P.U.", textAlign: TextAlign.center)),
-        SizedBox(width: 50),
+        SizedBox(width: isMobile ? 40 : 100, child: Text("Cumul", textAlign: TextAlign.center)),
+        SizedBox(width: isMobile ? 40 : 100, child: Text("Reste", textAlign: TextAlign.center)),
+        SizedBox(width: isMobile ? 40 : 100, child: Text("P.U.", textAlign: TextAlign.center)),
+        SizedBox( width: isMobile ? 50:  50),
       ],
     );
   }
@@ -1315,31 +1315,31 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
           child: Row(
             children: [
               SizedBox(
-                width: 400,
+                width: isMobile ? 80 : 400,
                 child: TextFieldBlocBuilder(textFieldBloc: poste.designation),
               ),
               SizedBox(
-                width: 80,
+                width: isMobile ? 40:  80,
                 child: TextFieldBlocBuilder(textFieldBloc: poste.unite),
               ),
 
               // CHAMPS DE SAISIE AVEC APPEL À setState
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: _numericField(poste.qteTotale, formBloc, setState),
               ),
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: _numericField(poste.qtePrecedente, formBloc, setState),
               ),
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: _numericField(poste.qteActuelle, formBloc, setState),
               ),
 
               // AFFICHAGE CUMUL
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: Center(
                   child: Text(
                     cumul.toStringAsFixed(2),
@@ -1353,7 +1353,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
 
               // AFFICHAGE RESTE
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: Center(
                   child: Text(
                     reste.toStringAsFixed(2),
@@ -1366,13 +1366,13 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
               ),
 
               SizedBox(
-                width: 100,
+                width: isMobile ? 40:  100,
                 child: _numericField(poste.prixUnitaire, formBloc, setState),
               ),
 
               // AFFICHAGE TOTAL LIGNE €
               SizedBox(
-                width: 100,
+                width: isMobile ? 20:  100,
                 child: Center(
                   child: Text(
                     montantLigne.toStringAsFixed(2) + " €",
