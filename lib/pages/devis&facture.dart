@@ -460,78 +460,75 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                             ],
                           ),
 
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.85,
+                          BlocBuilder<
+                            SelectFieldBloc<String, dynamic>,
+                            SelectFieldBlocState<String, dynamic>
+                          >(
+                            bloc: docFormBloc.type,
+                            builder: (context, state) {
+                              if (state.value == 'EA') {
+                                return _buildEASection(
+                                  context,
+                                  docFormBloc,
+                                );
+                              }
+                              return SizedBox(
+                                height:   MediaQuery.of(context).size.height * 0.85 ,
 
-                            width: MediaQuery.of(context).size.width ,
-                            child:
-                                BlocBuilder<
-                                  SelectFieldBloc<String, dynamic>,
-                                  SelectFieldBlocState<String, dynamic>
-                                >(
-                                  bloc: docFormBloc.type,
-                                  builder: (context, state) {
-                                    if (state.value == 'EA') {
-                                      return _buildEASection(
+                                width: MediaQuery.of(context).size.width ,
+
+                                child: Column(
+                                  children: [
+                                    const SizedBox(width: 15),
+                                    SizedBox(
+                                      height: 100,
+                                      width: MediaQuery.of(
+                                        context,
+                                      ).size.width,
+                                      child: _buildStatusField(
                                         context,
                                         docFormBloc,
-                                      );
-                                    }
-                                    return SizedBox(
-                                      width: MediaQuery.of(context).size.width,
-                                      child: Column(
-                                        children: [
-                                          const SizedBox(width: 15),
-                                          SizedBox(
-                                            height: 100,
-                                            width: MediaQuery.of(
-                                              context,
-                                            ).size.width,
-                                            child: _buildStatusField(
-                                              context,
-                                              docFormBloc,
-                                            ),
-                                          ),
-
-                                          // Section Articles
-                                          const SizedBox(height: 30),
-                                          const Text(
-                                            "Liste des Articles",
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          _buildArticleList(
-                                            context,
-                                            docFormBloc,
-                                          ),
-
-                                          Expanded(
-                                            child: _buildTextField(
-
-                                              docFormBloc.notes,
-                                              "Notes",
-                                              "Ecrire ...",
-                                            ),
-                                          ),
-                                          // Section Totaux
-                                          const SizedBox(height: 30),
-                                          const Text(
-                                            "Totaux",
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          _buildTotals(context, docFormBloc),
-                                        ],
                                       ),
-                                    );
-                                  },
+                                    ),
+
+                                    // Section Articles
+                                    const SizedBox(height: 30),
+                                    const Text(
+                                      "Liste des Articles",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildArticleList(
+                                      context,
+                                      docFormBloc,
+                                    ),
+
+                                    Expanded(
+                                      child: _buildTextField(
+
+                                        docFormBloc.notes,
+                                        "Notes",
+                                        "Ecrire ...",
+                                      ),
+                                    ),
+                                    // Section Totaux
+                                    const SizedBox(height: 30),
+                                    const Text(
+                                      "Totaux",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildTotals(context, docFormBloc),
+                                  ],
                                 ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 15),
 
@@ -872,7 +869,7 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
 
   Widget _buildEASection(BuildContext context, DocumentFormBloc formBloc) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: MediaQuery.of(context).size.height * 0.5,
       width: MediaQuery.of(context).size.width * 0.6,
 
       child: Column(
@@ -971,36 +968,43 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
                 );
               }
 
-              return Column(
-                children: state.fieldBlocs.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final fieldBloc = entry.value;
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: TextFieldBlocBuilder(
-                          textFieldBloc: fieldBloc.numFacture,
-                          decoration: InputDecoration(labelText: 'N° Facture'),
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: TextFieldBlocBuilder(
-                          textFieldBloc: fieldBloc.montantHTVA,
-                          decoration: InputDecoration(
-                            labelText: 'Montant',
-                            suffixText: '€',
+              return SizedBox(
+                height: 200,
+
+                child: SingleChildScrollView(
+
+                  child: Column(
+                    children: state.fieldBlocs.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final fieldBloc = entry.value;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: TextFieldBlocBuilder(
+                              textFieldBloc: fieldBloc.numFacture,
+                              decoration: InputDecoration(labelText: 'N° Facture'),
+                            ),
                           ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () =>
-                            formBloc.facturesEmises.removeFieldBlocAt(index),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: TextFieldBlocBuilder(
+                              textFieldBloc: fieldBloc.montantHTVA,
+                              decoration: InputDecoration(
+                                labelText: 'Montant',
+                                suffixText: '€',
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () =>
+                                formBloc.facturesEmises.removeFieldBlocAt(index),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
               );
             },
           ),
