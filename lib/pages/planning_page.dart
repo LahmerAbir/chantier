@@ -2,7 +2,7 @@ import 'package:chantier/model/chantier_single.dart';
 import 'package:chantier/ui/common/loading_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';

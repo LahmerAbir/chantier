@@ -1,5 +1,5 @@
 import 'package:chantier/repository/chantier_repository.dart';
-import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 class CamionFormBloc extends FormBloc<String, String> {
   final nom = TextFieldBloc(validators: [FieldBlocValidators.required]);

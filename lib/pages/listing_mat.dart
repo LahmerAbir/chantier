@@ -1,7 +1,7 @@
 import 'package:chantier/model/homme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 import '../blocs/mat_form_bloc.dart';
 import '../model/simple_entity.dart';

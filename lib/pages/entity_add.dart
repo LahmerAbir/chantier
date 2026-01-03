@@ -1,7 +1,7 @@
 // lib/screens/add_simple_entity_modal.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 import '../blocs/simple_entity_form_bloc.dart';
 import '../model/simple_entity.dart';

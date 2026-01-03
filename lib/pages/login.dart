@@ -2,7 +2,7 @@ import 'package:auto_route/annotations.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
+import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:responsive_units/responsive_units.dart';
 

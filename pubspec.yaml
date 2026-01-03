@@ -38,7 +38,7 @@ dependencies:
   google_fonts: ^6.1.0
   fl_chart: ^0.66.0
   flutter_riverpod: ^2.4.9
-  flutter_form_bloc_plus: ^0.32.1
+  flutter_form_bloc: ^0.31.0
   timezone: ^0.9.2
   loading_indicator: ^3.1.1
   responsive_units: ^0.2.0+1
@@ -46,13 +46,15 @@ dependencies:
   auto_size_text: ^3.0.0
   flutter_data: ^1.5.12
   dio: ^5.4.0
-  flutter_keyboard_visibility: ^6.0.0
+  flutter_keyboard_visibility: ^5.4.1
   pdf: ^3.10.4
   printing: ^5.14.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+dependency_overrides:
+  flutter_form_bloc:
+    path: packages/flutter_form_bloc-0.31.0
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
