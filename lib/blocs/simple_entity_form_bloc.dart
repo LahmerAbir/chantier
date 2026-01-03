@@ -1,4 +1,4 @@
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 import 'dart:math';
 
 import '../model/simple_entity.dart';

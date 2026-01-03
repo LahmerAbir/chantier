@@ -5,7 +5,7 @@ import 'package:chantier/repository/devis&facture_repository.dart';
 import 'package:chantier/ui/common/loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 import '../blocs/art_form_bloc.dart';
 import '../blocs/document_form_bloc.dart';
 import '../model/client.dart';

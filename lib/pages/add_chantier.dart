@@ -6,7 +6,7 @@ import 'package:chantier/pages/ressource_modal.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 
 import '../blocs/chantier_form_bloc.dart';
 import '../model/chantier.dart';

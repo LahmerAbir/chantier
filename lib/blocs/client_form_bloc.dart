@@ -1,7 +1,7 @@
 // Fichier: lib/form_blocs/client_form_bloc.dart
 
 import 'package:chantier/repository/chantier_repository.dart';
-import 'package:form_bloc/form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 
 import '../model/client.dart';
 

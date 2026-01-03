@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:chantier/repository/devis&facture_repository.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 
 import '../model/client.dart';
 import '../model/document.dart';

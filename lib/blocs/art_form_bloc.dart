@@ -1,7 +1,7 @@
 // --- ARTICLE FORM BLOC (Méthode Alternative) ---
 import 'dart:async';
 
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_form_bloc_plus/flutter_form_bloc_plus.dart';
 
 import '../model/document.dart';
 import '../utils/utils.dart';
