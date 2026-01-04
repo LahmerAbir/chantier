@@ -146,6 +146,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  SizedBox(
+                    height: 200,
+                    width: 200,
+                    child: TextFieldBlocBuilder(
+                      textFieldBloc: loginFormBloc.username,
+                      decoration: _inputDecoration(hintText: "Email"),
+                      suffixButton: SuffixButton.asyncValidating,
+
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.all(25.0),
                     child: Column(
@@ -195,79 +205,82 @@ InputDecoration _inputDecoration({
 Widget _form(BuildContext context, LoginFormBloc loginFormBloc) {
 
 
-  return Column(
-      children: [
-        TextFieldBlocBuilder(
-          textFieldBloc: loginFormBloc.username,
-          decoration: _inputDecoration(hintText: "Email"),
-          suffixButton: SuffixButton.asyncValidating,
+  return SizedBox(
+    height: MediaQuery.of(context).size.height *0.5,
+    child: Column(
+        children: [
+          TextFieldBlocBuilder(
+            textFieldBloc: loginFormBloc.username,
+            decoration: _inputDecoration(hintText: "Email"),
+            suffixButton: SuffixButton.asyncValidating,
 
-        ),
-      /*  TextFormControl(
-          textFieldBloc: loginFormBloc.username,
-          suffixButton: SuffixButton.asyncValidating,
-          keyboardType: TextInputType.emailAddress,
-          label: "Email",
-
-        ),*/
-        TextFieldBlocBuilder(
-          textFieldBloc: loginFormBloc.password,
-          decoration: _inputDecoration(hintText: "Mot de passe" ,
           ),
-          suffixButton: SuffixButton.obscureText,
-          obscureText: true,
+        /*  TextFormControl(
+            textFieldBloc: loginFormBloc.username,
+            suffixButton: SuffixButton.asyncValidating,
+            keyboardType: TextInputType.emailAddress,
+            label: "Email",
 
-        ),
+          ),*/
+          TextFieldBlocBuilder(
+            textFieldBloc: loginFormBloc.password,
+            decoration: _inputDecoration(hintText: "Mot de passe" ,
+            ),
+            suffixButton: SuffixButton.obscureText,
+            obscureText: true,
 
-        GestureDetector(
-          onTap: () {
-            loginFormBloc.stayConnect.updateValue(
-              !loginFormBloc.stayConnect.value,
-            );
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 150.sp,
-                child: CheckboxFieldBlocBuilder(
-                  padding: const EdgeInsets.only(left: 0, right: 0),
-                  overlayColor: MaterialStateProperty.all<Color>(
-                    Colors.black,
-                  ),
-                  fillColor: MaterialStateProperty.all<Color>(Colors.grey),
-                  checkColor: MaterialStateProperty.all<Color>(Colors.black),
-                  side: BorderSide(color: Colors.black),
-                  textColor: MaterialStateProperty.all<Color>(Colors.black),
-                  booleanFieldBloc: loginFormBloc.stayConnect,
-                  controlAffinity: FieldBlocBuilderControlAffinity.leading,
-                  body: Padding(
-                    padding: const EdgeInsets.only(left: 0.0),
-                    child: Text(
-                      'Rester connecté',
-                      style: GoogleFonts.inter(fontSize: 10),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              loginFormBloc.stayConnect.updateValue(
+                !loginFormBloc.stayConnect.value,
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 150.sp,
+                  child: CheckboxFieldBlocBuilder(
+                    padding: const EdgeInsets.only(left: 0, right: 0),
+                    overlayColor: MaterialStateProperty.all<Color>(
+                      Colors.black,
+                    ),
+                    fillColor: MaterialStateProperty.all<Color>(Colors.grey),
+                    checkColor: MaterialStateProperty.all<Color>(Colors.black),
+                    side: BorderSide(color: Colors.black),
+                    textColor: MaterialStateProperty.all<Color>(Colors.black),
+                    booleanFieldBloc: loginFormBloc.stayConnect,
+                    controlAffinity: FieldBlocBuilderControlAffinity.leading,
+                    body: Padding(
+                      padding: const EdgeInsets.only(left: 0.0),
+                      child: Text(
+                        'Rester connecté',
+                        style: GoogleFonts.inter(fontSize: 10),
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-            ],
+              ],
+            ),
           ),
-        ),
-        RowSpacer(),
-        FormButton(
-          labelColor: Colors.white,
-          width: double.infinity,
-          onPressed: () async {
-            loginFormBloc.submit();
-          },
-          primary: DeliveryColors.gray,
-          radius: 15,
-          label: 'Connexion',
-        ),
+          RowSpacer(),
+          FormButton(
+            labelColor: Colors.white,
+            width: double.infinity,
+            onPressed: () async {
+              loginFormBloc.submit();
+            },
+            primary: DeliveryColors.gray,
+            radius: 15,
+            label: 'Connexion',
+          ),
 
-        RowSpacer(),
-      ],
-    );
+          RowSpacer(),
+        ],
+      ),
+  );
 }
