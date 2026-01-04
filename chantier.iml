@@ -60,6 +60,18 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/example/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/linux/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_linux/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/flutter_form_bloc-0.31.0/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Dart SDK" level="project" />

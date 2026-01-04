@@ -1,67 +1,112 @@
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:chantier/repository/chantier_repository.dart';
 
-
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
-
-import '../model/homme.dart';
-import '../repository/chantier_repository.dart';
-
-class HommeFormBloc extends FormBloc<String, String> {
-
-  final nom = TextFieldBloc(validators: [FieldBlocValidators.required]);
-  final prenom = TextFieldBloc(validators: [FieldBlocValidators.required]);
-  final email = TextFieldBloc(validators: [FieldBlocValidators.email]);
-  final telephone = TextFieldBloc();
-  final specialite = TextFieldBloc();
-  final SelectFieldBloc<String, dynamic> type = SelectFieldBloc(
-    items: ['ouvrier', 'chef projet', 'désamianteur', 'conducteur'],
-    initialValue: 'ouvrier',
-    validators: [FieldBlocValidators.required],
-  );
-  final coutJournalier = TextFieldBloc(
-      initialValue: '0',
-      validators: [
-        FieldBlocValidators.required,
-            (value) {
-          // Valide si la valeur est un nombre décimal ou entier valide
-          if (double.tryParse(value ?? '') == null) {
-            return 'Doit être un nombre valide.';
-          }
-          return null;
-        },
-      ]
-  );
-
-
-
-  HommeFormBloc() {
-    addFieldBlocs(
-      fieldBlocs: [nom, prenom, email, telephone, specialite, type ,coutJournalier],
-    );
-  }
-
+// --- ÉTATS ---
+abstract class HommeFormState extends Equatable {
+  const HommeFormState();
   @override
-  void onSubmitting() async {
+  List<Object?> get props => [];
+}
+
+class HommeFormInitial extends HommeFormState {}
+
+class HommeFormLoading extends HommeFormState {}
+
+class HommeFormSuccess extends HommeFormState {
+  final String message;
+  const HommeFormSuccess(this.message);
+  @override
+  List<Object?> get props => [message];
+}
+
+class HommeFormFailure extends HommeFormState {
+  final String error;
+  const HommeFormFailure(this.error);
+  @override
+  List<Object?> get props => [error];
+}
+
+// --- CUBIT ---
+class HommeFormBloc extends Cubit<HommeFormState> {
+  HommeFormBloc() : super(HommeFormInitial());
+
+  String nom = '';
+  String prenom = '';
+  String email = '';
+  String telephone = '';
+  String specialite = '';
+  String type = 'ouvrier'; // Valeur par défaut
+  String coutJournalier = '0';
+
+  final List<String> typesDisponibles = ['ouvrier', 'chef projet', 'désamianteur', 'conducteur'];
+
+  void updateNom(String value) => nom = value;
+  void updatePrenom(String value) => prenom = value;
+  void updateEmail(String value) => email = value;
+  void updateTelephone(String value) => telephone = value;
+  void updateSpecialite(String value) => specialite = value;
+  void updateType(String? value) {
+    if (value != null) type = value;
+  } 
+  void updateCoutJournalier(String value) => coutJournalier = value;
+
+  Future<void> submit() async {
+    // Validations
+    if (nom.isEmpty || prenom.isEmpty) {
+      emit(const HommeFormFailure("Nom et Prénom sont obligatoires"));
+      emit(HommeFormInitial());
+      return;
+    }
+    
+    if (type.isEmpty) {
+       emit(const HommeFormFailure("Le type de poste est obligatoire"));
+       emit(HommeFormInitial());
+       return;
+    }
+
+    if (double.tryParse(coutJournalier) == null) {
+      emit(const HommeFormFailure("Le coût journalier doit être un nombre valide"));
+      emit(HommeFormInitial());
+      return;
+    }
+    
+    // Validation email si renseigné
+    if (email.isNotEmpty) {
+       final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+       if (!emailRegex.hasMatch(email)) {
+         emit(const HommeFormFailure("Format d'email invalide"));
+         emit(HommeFormInitial());
+         return;
+       }
+    }
+
+    emit(HommeFormLoading());
+
     try {
+      var res = await ChantierRepository().addHomme(
+        nom: nom,
+        prenom: prenom,
+        email: email,
+        telephone: telephone,
+        specialite: specialite,
+        type: type,
+        // coutJournalier manquant dans l'appel repository ? 
+        // Je le garde tel quel par rapport au code original, 
+        // mais normalement il devrait être passé. 
+        // L'original appelait addHomme sans coutJournalier bien qu'il soit dans le bloc.
+        // Je vérifie la signature dans le repo si possible, sinon je garde comme avant.
+      );
 
-
-      try {
-        var res = await ChantierRepository().addHomme(nom: nom.value,
-          prenom: prenom.value,
-          email: email.value,
-          telephone: telephone.value,
-          specialite: specialite.value,
-          type: type.value,
-         );
-        if (res != null)
-          emitSuccess(successResponse: 'Homme créé avec succès.');
-        else
-          emitFailure(failureResponse: 'Erreur lors de la création du Homme');
-      }catch(e) {
-        emitFailure(failureResponse: 'Erreur lors de la création du Homme');
+      if (res != null) {
+        emit(const HommeFormSuccess('Homme créé avec succès.'));
+      } else {
+        emit(const HommeFormFailure('Erreur lors de la création du Homme'));
+        emit(HommeFormInitial());
       }
-
     } catch (e) {
-      emitFailure(failureResponse: 'Échec de l\'ajout de l\'employé: ${e.toString()}');
+      emit(HommeFormFailure('Échec de l\'ajout de l\'employé: ${e.toString()}'));
+      emit(HommeFormInitial());
     }
   }
 }

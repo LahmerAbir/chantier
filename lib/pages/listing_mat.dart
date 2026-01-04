@@ -1,14 +1,15 @@
 import 'package:chantier/model/homme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+// import 'package:flutter_form_bloc/flutter_form_bloc.dart'; // SUPPRIMÉ
 
 import '../blocs/mat_form_bloc.dart';
 import '../model/simple_entity.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
-import 'entity_add.dart';
+// import 'entity_add.dart';
 
 class MatManagementScreen extends StatefulWidget {
   final String title;
@@ -58,7 +59,12 @@ class _EntityManagementScreenState extends State<MatManagementScreen> {
   void _showAddMatModal(BuildContext context) async {
     final result = await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (context) => const MaterielForm()));
+    ).push(MaterialPageRoute(builder: (context) => 
+        BlocProvider(
+          create: (context) => MaterielFormBloc(),
+          child: const MaterielForm()
+        )
+    ));
 
     if (result == true) {
       {
@@ -189,12 +195,31 @@ class _EntityManagementScreenState extends State<MatManagementScreen> {
   }
 }
 
-class MaterielForm extends StatelessWidget {
+class MaterielForm extends StatefulWidget {
   const MaterielForm({super.key});
 
   @override
+  State<MaterielForm> createState() => _MaterielFormState();
+}
+
+class _MaterielFormState extends State<MaterielForm> {
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _numeroSerieController = TextEditingController();
+  final TextEditingController _coutController = TextEditingController(text: "0");
+  
+  String _selectedType = 'petit';
+
+  @override
+  void dispose() {
+    _nomController.dispose();
+    _numeroSerieController.dispose();
+    _coutController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formBloc = BlocProvider.of<MaterielFormBloc>(context);
+    final formBloc = context.read<MaterielFormBloc>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -204,22 +229,21 @@ class MaterielForm extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
-      body: FormBlocListener<MaterielFormBloc, String, String>(
-        onSubmitting: (context, state) {
-          LoadingDialog.show(context);
-        },
-        onSuccess: (context, state) {
-          LoadingDialog.hide(context);
-
-          ScaffoldMessenger.of(context)
-            ..showSnackBar(SnackBar(content: Text(state.successResponse!)));
-          Navigator.of(context).pop(true);
-        },
-        onFailure: (context, state) {
-          LoadingDialog.hide(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
-          );
+      body: BlocListener<MaterielFormBloc, MaterielFormState>(
+        listener: (context, state) {
+          if (state is MaterielFormLoading) {
+            LoadingDialog.show(context);
+          } else if (state is MaterielFormSuccess) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context)
+              ..showSnackBar(SnackBar(content: Text(state.message)));
+            Navigator.of(context).pop(true);
+          } else if (state is MaterielFormFailure) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
+          }
         },
 
         child: SingleChildScrollView(
@@ -235,38 +259,67 @@ class MaterielForm extends StatelessWidget {
             children: [
               const Divider(),
 
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.nom,
+              TextFormField(
+                controller: _nomController,
                 decoration: const InputDecoration(
                   labelText: 'Nom du Matériel (Obligatoire)',
+                  border: OutlineInputBorder(),
                 ),
+                onChanged: formBloc.updateNom,
               ),
+              const SizedBox(height: 15),
 
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.numeroSerie,
-                decoration: const InputDecoration(labelText: 'matricule'),
-              ),
-
-              DropdownFieldBlocBuilder<String>(
-                selectFieldBloc: formBloc.type,
-                decoration: InputDecoration(
-                  labelText: 'Type',
+              TextFormField(
+                controller: _numeroSerieController,
+                decoration: const InputDecoration(
+                  labelText: 'Matricule',
+                  border: OutlineInputBorder(),
                 ),
-                itemBuilder: (context, value) => FieldItem(
-                  child: Text(value),
-                ),
-
+                onChanged: formBloc.updateNumeroSerie,
               ),
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.coutLocationJournalier,
-                decoration: const InputDecoration(labelText: 'Coût Journalier'),
+              const SizedBox(height: 15),
+
+              DropdownButtonFormField<String>(
+                value: _selectedType,
+                decoration: const InputDecoration(
+                    labelText: 'Type',
+                    border: OutlineInputBorder(),
+                ),
+                items: formBloc.typesDisponibles.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedType = newValue!;
+                    formBloc.updateType(newValue);
+                  });
+                },
+              ),
+              const SizedBox(height: 15),
+              
+              TextFormField(
+                controller: _coutController,
+                decoration: const InputDecoration(
+                  labelText: 'Coût Journalier',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.number,
+                onChanged: formBloc.updateCout,
               ),
 
               const SizedBox(height: 20),
 
               ElevatedButton.icon(
-                onPressed: formBloc.submit,
+                onPressed: () {
+                  formBloc.updateNom(_nomController.text);
+                  formBloc.updateNumeroSerie(_numeroSerieController.text);
+                  formBloc.updateType(_selectedType);
+                  formBloc.updateCout(_coutController.text);
+                  formBloc.submit();
+                },
                 icon: const Icon(Icons.add_box),
                 label: const Text('Enregistrer le Matériel'),
               ),

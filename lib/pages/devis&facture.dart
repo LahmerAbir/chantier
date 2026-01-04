@@ -1,20 +1,20 @@
-// lib/screens/documents_screen.dart
 import 'package:chantier/pages/pdf_view.dart';
 import 'package:chantier/repository/chantier_repository.dart';
 import 'package:chantier/repository/devis&facture_repository.dart';
 import 'package:chantier/ui/common/loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
-import '../blocs/art_form_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
 import '../blocs/document_form_bloc.dart';
 import '../model/client.dart';
 import '../model/document.dart';
 import '../ui/common/loading_dialog.dart';
 import '../utils/utils.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 class DocumentsPage extends StatefulWidget {
   const DocumentsPage({super.key});
@@ -25,11 +25,35 @@ class DocumentsPage extends StatefulWidget {
 
 class _DocumentsPageState extends State<DocumentsPage> {
   List<Facture> documents = [];
+  bool isLoading = true;
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDocuments();
+  }
+
+  void _loadDocuments() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        documents = await FactureRepository().getFactures() ?? [];
+        setState(() {
+          isLoading = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+        });
+        print("exception list docs $e");
+      }
+    });
+  }
 
   void _openAddDocumentScreen() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (context) => NewDocumentScreen()))
-        .then((_) => setState(() {}));
+        .then((_) => _loadDocuments());
   }
 
   void _navigateToEdit(Facture facture) async {
@@ -41,42 +65,8 @@ class _DocumentsPageState extends State<DocumentsPage> {
     );
 
     if (result == true) {
-      setState(() {
-        isLoading = true;
-      });
-      try {
-        documents = await FactureRepository().getFactures() ?? [];
-        setState(() {
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() {
-          isLoading = false;
-        });
-        print("exception list chantier $e");
-      } // Rafraîchir la liste après modification
+      _loadDocuments();
     }
-  }
-
-  bool isLoading = true;
-
-  @override
-  initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        documents = await FactureRepository().getFactures() ?? [];
-        setState(() {
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() {
-          isLoading = false;
-        });
-        print("exception list chantier $e");
-      }
-    });
   }
 
   Color _getStatusColor(String status) {
@@ -94,10 +84,11 @@ class _DocumentsPageState extends State<DocumentsPage> {
     }
   }
 
-  final ScrollController scrollController = ScrollController();
-
   @override
   Widget build(BuildContext context) {
+    bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -121,7 +112,6 @@ class _DocumentsPageState extends State<DocumentsPage> {
             ],
           ),
           const SizedBox(height: 20),
-
           isLoading
               ? Loader()
               : documents.isNotEmpty
@@ -134,9 +124,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     controller: scrollController,
                     thumbVisibility: true,
                     child: SingleChildScrollView(
-                      scrollDirection: isMobile
-                          ? Axis.horizontal
-                          : Axis.vertical,
+                      scrollDirection: isMobile ? Axis.horizontal : Axis.vertical,
                       controller: scrollController,
                       child: SingleChildScrollView(
                         child: Padding(
@@ -149,96 +137,37 @@ class _DocumentsPageState extends State<DocumentsPage> {
                             child: DataTable(
                               columns: const [
                                 DataColumn(
-                                  label: Text(
-                                    'Type/N°',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                /* DataColumn(
-                                  label: Text(
-                                    'Client',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),*/
-                                DataColumn(
-                                  label: Text(
-                                    'Date',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  label: Text('Type/N°', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                                 DataColumn(
-                                  label: Text(
-                                    'Total TTC',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                                 DataColumn(
-                                  label: Text(
-                                    'Status',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  label: Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                                 ),
                                 DataColumn(
-                                  label: Text(
-                                    'Actions',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                                DataColumn(
+                                  label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                               ],
-
                               rows: documents.map((doc) {
                                 return DataRow(
                                   cells: [
-                                    DataCell(
-                                      Text(
-                                        "${doc.reference}",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    //DataCell(Text(doc.client)),
+                                    DataCell(Text("${doc.reference}", style: const TextStyle(fontWeight: FontWeight.w500))),
                                     DataCell(Text(doc.date ?? "")),
-                                    DataCell(
-                                      Text(
-                                        "${Utils.formatNumber(doc.totalTtc ?? 0)}",
-                                      ),
-                                    ),
+                                    DataCell(Text("${Utils.formatNumber(doc.totalTtc ?? 0)}")),
                                     DataCell(
                                       Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: _getStatusColor(
-                                            doc.status ?? "",
-                                          ).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
+                                          color: _getStatusColor(doc.status ?? "").withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           doc.status ?? "",
-                                          style: TextStyle(
-                                            color: _getStatusColor(
-                                              doc.status ?? "",
-                                            ),
-                                            fontSize: 12,
-                                          ),
+                                          style: TextStyle(color: _getStatusColor(doc.status ?? ""), fontSize: 12),
                                         ),
                                       ),
                                     ),
@@ -246,25 +175,12 @@ class _DocumentsPageState extends State<DocumentsPage> {
                                       Row(
                                         children: [
                                           IconButton(
-                                            icon: Icon(
-                                              Icons.edit,
-                                              color: Colors.blue.shade700,
-                                              size: 20,
-                                            ),
-                                            onPressed: () =>
-                                                _navigateToEdit(doc),
-                                            tooltip: 'Modifier',
+                                            icon: Icon(Icons.edit, color: Colors.blue.shade700, size: 20),
+                                            onPressed: () => _navigateToEdit(doc),
                                           ),
                                           IconButton(
-                                            icon: const Icon(
-                                              Icons.delete,
-                                              color: Colors.red,
-                                              size: 20,
-                                            ),
-                                            onPressed: () => setState(
-                                              () => documents.remove(doc),
-                                            ),
-                                            tooltip: 'Supprimer',
+                                            icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                            onPressed: () => setState(() => documents.remove(doc)),
                                           ),
                                         ],
                                       ),
@@ -279,7 +195,7 @@ class _DocumentsPageState extends State<DocumentsPage> {
                     ),
                   ),
                 )
-              : Center(child: Text("Liste est vide")),
+              : const Center(child: Text("Liste est vide")),
         ],
       ),
     );
@@ -287,25 +203,21 @@ class _DocumentsPageState extends State<DocumentsPage> {
 }
 
 class NewDocumentScreen extends StatefulWidget {
-  NewDocumentScreen({Key? key, this.factureToEdit}) : super(key: key);
   final Facture? factureToEdit;
+
+  const NewDocumentScreen({Key? key, this.factureToEdit}) : super(key: key);
 
   @override
   State<NewDocumentScreen> createState() => _NewDocumentScreenState();
 }
-
-bool isMobile =
-    defaultTargetPlatform == TargetPlatform.android ||
-    defaultTargetPlatform == TargetPlatform.iOS;
 
 class _NewDocumentScreenState extends State<NewDocumentScreen> {
   List<Client> clients = [];
   bool isLoading = true;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         clients = await ChantierRepository().getClients() ?? [];
@@ -316,408 +228,738 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
         setState(() {
           isLoading = false;
         });
-        print("exception list chantier $e");
+        print("exception list clients $e");
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return isLoading
-        ? Loader()
-        : BlocProvider(
-            create: (context) => DocumentFormBloc(
-              initialFacture: widget.factureToEdit,
-              availableClients: clients,
-            ),
+    if (isLoading) return const Scaffold(body: Loader());
 
-            child: Builder(
-              builder: (context) {
-                final docFormBloc = context.read<DocumentFormBloc>();
-                docFormBloc.client.updateItems(clients);
+    return BlocProvider(
+      create: (context) => DocumentFormBloc(
+        initialFacture: widget.factureToEdit,
+        availableClients: clients,
+      ),
+      child: const _DocumentFormContent(),
+    );
+  }
+}
 
-                return Scaffold(
-                  appBar: AppBar(
-                    title: const Text("Créer Document"),
-                    backgroundColor: Colors.white,
-                    elevation: 0,
+class _DocumentFormContent extends StatefulWidget {
+  const _DocumentFormContent({Key? key}) : super(key: key);
+
+  @override
+  State<_DocumentFormContent> createState() => _DocumentFormContentState();
+}
+
+class _DocumentFormContentState extends State<_DocumentFormContent> {
+  // Controllers
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+
+  // Controllers EA
+  final TextEditingController _periodeEAController = TextEditingController();
+  final TextEditingController _numCommandeController = TextEditingController();
+  final TextEditingController _totalCommandeBaseController = TextEditingController();
+  final TextEditingController _totalSupplementsController = TextEditingController();
+  final TextEditingController _retenueRetardController = TextEditingController();
+  final TextEditingController _avancementCumuleController = TextEditingController();
+
+  bool isMobile = defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+
+  @override
+  void initState() {
+    super.initState();
+    final bloc = context.read<DocumentFormBloc>();
+    
+    // Init values
+    _notesController.text = bloc.notes;
+    _dateController.text = bloc.date != null ? DateFormat('dd/MM/yyyy').format(bloc.date!) : '';
+    
+    // Init EA values
+    _periodeEAController.text = bloc.periodeEA;
+    _numCommandeController.text = bloc.numCommande;
+    _totalCommandeBaseController.text = bloc.totalCommandeBase;
+    _totalSupplementsController.text = bloc.totalSupplements;
+    _retenueRetardController.text = bloc.retenueRetard;
+    _avancementCumuleController.text = bloc.avancementCumule;
+  }
+  
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _dateController.dispose();
+    _periodeEAController.dispose();
+    _numCommandeController.dispose();
+    _totalCommandeBaseController.dispose();
+    _totalSupplementsController.dispose();
+    _retenueRetardController.dispose();
+    _avancementCumuleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final bloc = context.read<DocumentFormBloc>();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: bloc.date ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        bloc.date = picked;
+        _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final docFormBloc = context.watch<DocumentFormBloc>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Créer Document"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: BlocListener<DocumentFormBloc, DocumentFormState>(
+        listener: (context, state) async {
+          if (state is DocumentFormLoading) {
+            LoadingDialog.show(context);
+          } else if (state is DocumentFormSuccess) {
+            LoadingDialog.hide(context);
+            
+            if (docFormBloc.type == "EA") {
+              // Génération PDF EA
+              await generateEAPdf(docFormBloc, context);
+            } else {
+              // Facture/Devis standard
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message)),
+              );
+              Navigator.of(context).pop(true);
+            }
+          } else if (state is DocumentFormFailure) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error), backgroundColor: Colors.red),
+            );
+          }
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Informations Générales",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: docFormBloc.type,
+                      decoration: _inputDecoration(labelText: "Type"),
+                      items: ['Facture', 'Devis', 'EA'].map((e) => 
+                        DropdownMenuItem(value: e, child: Text(e))
+                      ).toList(),
+                      onChanged: (val) {
+                         setState(() {
+                           docFormBloc.type = val!;
+                         });
+                      },
+                    ),
                   ),
-                  body: FormBlocListener<DocumentFormBloc, String, String>(
-                    onSubmitting: (context, state) {
-                      LoadingDialog.show(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Soumission en cours...')),
-                      );
-                    },
-                    onDeleting: (context, state) {
-                      LoadingDialog.hide(context);
-                      setState(() {
-                        print("set stateeee");
-                      });
-                    },
-                    onSuccess: (context, state) async {
-                      LoadingDialog.hide(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(state.successResponse ?? "")),
-                      );
-                      if (docFormBloc.type.value == "EA") {
-                        print("pdf EA");
-                      } else {
-                        if (widget.factureToEdit != null) {
-                          ScaffoldMessenger.of(context)..showSnackBar(
-                            SnackBar(content: Text(state.successResponse!)),
-                          );
-                          Navigator.of(context).pop(true);
-                        } else {
-                          final List<Article> finalArticles = docFormBloc
-                              .articleBlocs
-                              .map((bloc) => bloc.articleData)
-                              .toList();
-                          int totalTTC = 0;
-                          int totalHT = 0;
-
-                          for (var e in finalArticles) {
-                            totalHT = totalHT + (e.prixUnitaire! * e.quantite!);
-                          }
-                          totalTTC = totalHT;
-                          final Facture newDocument = Facture(
-                            notes: docFormBloc.notes.value ?? "",
-
-                            client: docFormBloc.client.value,
-                            clientId: docFormBloc.client.value?.id ?? 1,
-                            reference: state.successResponse,
-                            date: docFormBloc.date.value.toString() ?? "",
-                            totalTtc: totalTTC,
-                            totalHt: totalHT,
-                            status: docFormBloc.status.value ?? "",
-                            articles: finalArticles, // Placeholder
-                          );
-
-                          // Ouvre la page d'aperçu PDF
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  PdfPreviewPage(document: newDocument),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    onFailure: (context, state) {
-                      LoadingDialog.hide(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(state.failureResponse!)),
-                      );
-                    },
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Informations Générales",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  const SizedBox(width: 15),
+                ],
+              ),
+              const SizedBox(height: 15),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDate(context),
+                      child: IgnorePointer(
+                        child: TextFormField(
+                          controller: _dateController,
+                          decoration: _inputDecoration(
+                            labelText: "Date",
+                            suffixIcon: const Icon(Icons.calendar_today),
                           ),
-                          const SizedBox(height: 20),
-
-                          Row(
-                            children: [
-                              Expanded(child: _buildTypeField(context)),
-                              const SizedBox(width: 15),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(child: _buildDateField(context)),
-                              const SizedBox(width: 15),
-
-                              isLoading
-                                  ? Loader()
-                                  : Expanded(
-                                      child: DropdownFieldBlocBuilder<Client>(
-                                        selectFieldBloc: docFormBloc.client,
-                                        itemBuilder: (context, client) =>
-                                            FieldItem(
-                                              child: Text(
-                                                client.nom ?? 'Client sans nom',
-                                              ),
-                                            ),
-
-                                        decoration: const InputDecoration(
-                                          labelText: 'Client',
-                                          hintText: 'Sélectionnez le client',
-                                        ),
-                                      ),
-                                    ),
-                            ],
-                          ),
-
-                          BlocBuilder<
-                            SelectFieldBloc<String, dynamic>,
-                            SelectFieldBlocState<String, dynamic>
-                          >(
-                            bloc: docFormBloc.type,
-                            builder: (context, state) {
-                              if (state.value == 'EA') {
-                                return Column(
-                                  children: [
-                                    _buildEASection(context, docFormBloc),
-                                    const SizedBox(height: 30),
-                                  isMobile ? _buildDetailsTab_Mobile(docFormBloc) :  _buildDetailsTab(docFormBloc),
-                                  ],
-                                );
-                              }
-                              return SizedBox(
-                                height:
-                                   isMobile ? MediaQuery.of(context).size.height  : MediaQuery.of(context).size.height * 0.85,
-
-                                width: MediaQuery.of(context).size.width,
-
-                                child: Column(
-                                  children: [
-                                    const SizedBox(width: 15),
-                                    SizedBox(
-                                      height: 100,
-                                      width: MediaQuery.of(context).size.width,
-                                      child: _buildStatusField(
-                                        context,
-                                        docFormBloc,
-                                      ),
-                                    ),
-
-                                    // Section Articles
-                                    const SizedBox(height: 20),
-                                    const Text(
-                                      "Liste des Articles",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _buildArticleList(context, docFormBloc),
-
-                                    Expanded(
-                                      child: _buildTextField(
-                                        docFormBloc.notes,
-                                        "Notes",
-                                        "Ecrire ...",
-                                      ),
-                                    ),
-                                    // Section Totaux
-                                    const SizedBox(height: 20),
-                                    const Text(
-                                      "Totaux",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _buildTotals(context, docFormBloc),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 15),
-
-                          // Bouton Soumettre
-                          const SizedBox(height: 30),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                if (docFormBloc.type.value == "EA")
-                                  await generateEAPdf(docFormBloc);
-                                else
-                                  docFormBloc.submit();
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Text(
-                                "Sauvegarder le Document",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          );
-  }
-  Widget _buildDetailsTab_Mobile(DocumentFormBloc formBloc) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.35,
-      width: MediaQuery.of(context).size.width,
-      child: BlocBuilder<ListFieldBloc<PosteEAFieldBloc, dynamic>, ListFieldBlocState<PosteEAFieldBloc, dynamic>>(
-        bloc: formBloc.postesEA,
-        builder: (context, state) {
-          return Column(
-            children: [
-              // Résumé rapide en haut
-              Container(
-                color: Colors.blueGrey[50],
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Postes: ${state.fieldBlocs.length}", style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Total (B): ${formBloc.avancementCumule.value} €", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[800])),
-                  ],
-                ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                     child: DropdownButtonFormField<Client>(
+                        value: docFormBloc.client,
+                        decoration: _inputDecoration(labelText: "Client", hintText: "Sélectionnez"),
+                        items: (context.read<DocumentFormBloc>().availableClients ?? []).map((c) => 
+                          DropdownMenuItem(value: c, child: Text(c.nom ?? 'Inconnu'))
+                        ).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                             docFormBloc.client = val;
+                          });
+                        },
+                     ),
+                  ),
+                ],
               ),
 
-              // Liste des postes
-              Expanded(
-                child: state.fieldBlocs.isEmpty
-                    ? Center(child: Text("Aucun poste. Cliquez sur +"))
-                    : ListView.builder(
-                  itemCount: state.fieldBlocs.length,
-                  itemBuilder: (context, index) => _buildMobilePosteCard(state.fieldBlocs[index], formBloc, index),
-                ),
-              ),
-
-              // Bouton d'ajout flottant ou fixe
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton.icon(
-                  onPressed: () => formBloc.postesEA.addFieldBloc(PosteEAFieldBloc.create('p_${DateTime.now().millisecond}')),
-                  icon: const Icon(Icons.add),
-                  label: const Text("AJOUTER UN POSTE"),
-                  style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+              const SizedBox(height: 20),
+              
+              // CONTENU DYNAMIQUE SELON TYPE
+              if (docFormBloc.type == 'EA') ...[
+                 _buildEASection(context, docFormBloc),
+                 const SizedBox(height: 30),
+                 isMobile 
+                   ? _buildDetailsTab_Mobile(docFormBloc) 
+                   : _buildDetailsTab(docFormBloc),
+              ] else ...[
+                 _buildStandardSection(context, docFormBloc),
+              ],
+              
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Update final values
+                    docFormBloc.notes = _notesController.text;
+                    // EA Fields
+                    docFormBloc.periodeEA = _periodeEAController.text;
+                    docFormBloc.totalCommandeBase = _totalCommandeBaseController.text;
+                    docFormBloc.totalSupplements = _totalSupplementsController.text;
+                    docFormBloc.retenueRetard = _retenueRetardController.text;
+                    
+                    if (docFormBloc.type == "EA") {
+                       // Trigger PDF gen directly or via state
+                       docFormBloc.submit(); 
+                    } else {
+                       docFormBloc.submit();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text(
+                    "Sauvegarder le Document",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
-
-  Widget _buildMobilePosteCard(PosteEAFieldBloc poste, DocumentFormBloc formBloc, int index) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        // Calculs
-        double total = double.tryParse(poste.qteTotale.value.replaceFirst(',', '.')) ?? 0.0;
-        double prec = double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ?? 0.0;
-        double actu = double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ?? 0.0;
-        double pu = double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ?? 0.0;
-        double cumul = prec + actu;
-        double reste = total - cumul;
-
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          elevation: 2,
-          child: ExpansionTile(
-            leading: CircleAvatar(child: Text("${index + 1}")),
-            title: TextFieldBlocBuilder(
-              textFieldBloc: poste.designation,
-              decoration: const InputDecoration(labelText: "Désignation", border: InputBorder.none),
-            ),
-            subtitle: Text("Cumul: $cumul / Reste: $reste",
-                style: TextStyle(color: reste < 0 ? Colors.red : Colors.green, fontSize: 12)),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12.0),
+  
+  Widget _buildStandardSection(BuildContext context, DocumentFormBloc bloc) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: bloc.status,
+          decoration: _inputDecoration(labelText: "Statut"),
+          items: ['payée', 'non payée', 'partiellement payée'].map((e) => 
+            DropdownMenuItem(value: e, child: Text(e))
+          ).toList(),
+          onChanged: (val) {
+             setState(() => bloc.status = val!);
+          },
+        ),
+        const SizedBox(height: 20),
+        
+        const Text("Liste des Articles", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: bloc.articles.length,
+          itemBuilder: (context, index) {
+            final article = bloc.articles[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   children: [
                     Row(
-                      children: [
-                        Expanded(child: _numericInput_Mobile(poste.unite, "Unité", formBloc, setState, isText: true)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _numericInput_Mobile(poste.qteTotale, "Qté Totale", formBloc, setState)),
-                      ],
-                    ),
-                    const Divider(),
-                    Row(
-                      children: [
-                        Expanded(child: _numericInput_Mobile(poste.qtePrecedente, "Précédent", formBloc, setState)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _numericInput_Mobile(poste.qteActuelle, "Actuel", formBloc, setState, highlight: true)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _numericInput_Mobile(poste.prixUnitaire, "Prix Unitaire (€)", formBloc, setState),
-                    const SizedBox(height: 10),
-                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Total HT: ${(cumul * pu).toStringAsFixed(2)} €", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text("Article #${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold)),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => formBloc.postesEA.removeFieldBlocAt(index),
+                          icon: const Icon(Icons.remove_circle, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                               bloc.removeArticleAt(index);
+                            });
+                          },
+                        )
+                      ],
+                    ),
+                    TextFormField(
+                      initialValue: article.description,
+                      decoration: _inputDecoration(labelText: "Description"),
+                      onChanged: (v) => article.description = v,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: article.quantite,
+                            decoration: _inputDecoration(labelText: "Qté"),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                               article.quantite = v;
+                               setState(() => bloc.recalculateTotals());
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: article.prixUnitaire,
+                            decoration: _inputDecoration(labelText: "Prix U. HT"),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                               article.prixUnitaire = v;
+                               setState(() => bloc.recalculateTotals());
+                            },
+                          ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
-              )
+              ),
+            );
+          },
+        ),
+        
+        TextButton.icon(
+          onPressed: () {
+            setState(() => bloc.addArticle());
+          },
+          icon: const Icon(Icons.add_circle, color: Colors.blue),
+          label: const Text("Ajouter un article"),
+        ),
+        
+        const SizedBox(height: 20),
+        TextFormField(
+          controller: _notesController,
+          maxLines: 3,
+          decoration: _inputDecoration(labelText: "Notes"),
+        ),
+        
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Total HT:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text("${bloc.totalHT.toStringAsFixed(2)} €", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Total TTC:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+            Text("${bloc.totalTTC.toStringAsFixed(2)} €", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- EA SECTION ---
+  
+  Widget _buildEASection(BuildContext context, DocumentFormBloc bloc) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _numCommandeController,
+                readOnly: true,
+                decoration: _inputDecoration(labelText: "N° Commande"),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextFormField(
+                controller: _periodeEAController,
+                decoration: _inputDecoration(labelText: "Période EA"),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _totalCommandeBaseController,
+                decoration: _inputDecoration(labelText: "Total Commande (A)"),
+                keyboardType: TextInputType.number,
+                onChanged: (v) => bloc.totalCommandeBase = v,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextFormField(
+                controller: _totalSupplementsController,
+                decoration: _inputDecoration(labelText: "Suppléments (G)"),
+                keyboardType: TextInputType.number,
+                onChanged: (v) => bloc.totalSupplements = v,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _avancementCumuleController,
+                readOnly: true, // Calculé
+                decoration: _inputDecoration(labelText: "Avancement (B)"),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextFormField(
+                controller: _retenueRetardController,
+                decoration: _inputDecoration(labelText: "Retenue (C)"),
+                keyboardType: TextInputType.number,
+                onChanged: (v) => bloc.retenueRetard = v,
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 20),
+        const Text("Factures émises (E)", style: TextStyle(fontWeight: FontWeight.bold)),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: bloc.facturesEmises.length,
+          itemBuilder: (context, index) {
+            final item = bloc.facturesEmises[index];
+            return Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: item.numFacture,
+                    decoration: _inputDecoration(labelText: "N° Facture"),
+                    onChanged: (v) => item.numFacture = v,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: item.montantHTVA,
+                    decoration: _inputDecoration(labelText: "Montant HT"),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => item.montantHTVA = v,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    setState(() => bloc.removeFactureEmiseAt(index));
+                  },
+                )
+              ],
+            );
+          },
+        ),
+        TextButton.icon(
+          onPressed: () => setState(() => bloc.addFactureEmise()),
+          icon: const Icon(Icons.add),
+          label: const Text("Ajouter facture émise"),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsTab(DocumentFormBloc bloc) {
+     // Version Desktop / Tablette (Tableau)
+     return Column(
+       children: [
+          Row(
+            children: const [
+               Expanded(flex: 3, child: Text("Désignation", style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("Unité", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("Qté Tot.", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("Préc.", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("Actuel", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("Cumul", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               Expanded(child: Text("P.U.", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+               SizedBox(width: 40),
             ],
           ),
-        );
-      },
+          const Divider(),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: bloc.postesEA.length,
+            itemBuilder: (context, index) {
+               final poste = bloc.postesEA[index];
+               double prec = double.tryParse(poste.qtePrecedente) ?? 0;
+               double actu = double.tryParse(poste.qteActuelle) ?? 0;
+               double cumul = prec + actu;
+               
+               return Padding(
+                 padding: const EdgeInsets.symmetric(vertical: 4),
+                 child: Row(
+                   children: [
+                      Expanded(
+                        flex: 3, 
+                        child: TextFormField(
+                          initialValue: poste.designation, 
+                          decoration: _inputDecoration(hintText: ""),
+                          onChanged: (v) => poste.designation = v,
+                        )
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextFormField(
+                           initialValue: poste.unite,
+                           onChanged: (v) => poste.unite = v,
+                           decoration: _inputDecoration(hintText: "")
+                        )
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextFormField(
+                           initialValue: poste.qteTotale,
+                           onChanged: (v) => poste.qteTotale = v,
+                           decoration: _inputDecoration(hintText: "")
+                        )
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextFormField(
+                           initialValue: poste.qtePrecedente,
+                           onChanged: (v) {
+                              poste.qtePrecedente = v;
+                              setState(() {
+                                 bloc.recalculerTotalB();
+                                 _avancementCumuleController.text = bloc.avancementCumule;
+                              });
+                           },
+                           decoration: _inputDecoration(hintText: "")
+                        )
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextFormField(
+                           initialValue: poste.qteActuelle,
+                           onChanged: (v) {
+                              poste.qteActuelle = v;
+                              setState(() {
+                                 bloc.recalculerTotalB();
+                                 _avancementCumuleController.text = bloc.avancementCumule;
+                              });
+                           },
+                           decoration: _inputDecoration(hintText: "")
+                        )
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(cumul.toStringAsFixed(2), textAlign: TextAlign.center)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextFormField(
+                           initialValue: poste.prixUnitaire,
+                           onChanged: (v) {
+                              poste.prixUnitaire = v;
+                              setState(() {
+                                 bloc.recalculerTotalB();
+                                 _avancementCumuleController.text = bloc.avancementCumule;
+                              });
+                           },
+                           decoration: _inputDecoration(hintText: "")
+                        )
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                           setState(() {
+                              bloc.removePosteEAAt(index);
+                              _avancementCumuleController.text = bloc.avancementCumule;
+                           });
+                        },
+                      )
+                   ],
+                 ),
+               );
+            },
+          ),
+          TextButton.icon(
+             onPressed: () => setState(() => bloc.addPosteEA()),
+             icon: const Icon(Icons.add),
+             label: const Text("Ajouter un poste"),
+          )
+       ],
+     );
+  }
+
+  Widget _buildDetailsTab_Mobile(DocumentFormBloc bloc) {
+    return Column(
+      children: [
+        ...bloc.postesEA.asMap().entries.map((entry) {
+          final index = entry.key;
+          final poste = entry.value;
+          
+          double prec = double.tryParse(poste.qtePrecedente) ?? 0;
+          double actu = double.tryParse(poste.qteActuelle) ?? 0;
+          double cumul = prec + actu;
+
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  TextFormField(
+                    initialValue: poste.designation,
+                    decoration: _inputDecoration(labelText: "Désignation"),
+                    onChanged: (v) => poste.designation = v,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: poste.qtePrecedente,
+                          decoration: _inputDecoration(labelText: "Préc."),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) {
+                             poste.qtePrecedente = v;
+                             setState(() {
+                               bloc.recalculerTotalB();
+                               _avancementCumuleController.text = bloc.avancementCumule;
+                             });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: poste.qteActuelle,
+                          decoration: _inputDecoration(labelText: "Actuel"),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) {
+                             poste.qteActuelle = v;
+                             setState(() {
+                               bloc.recalculerTotalB();
+                               _avancementCumuleController.text = bloc.avancementCumule;
+                             });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Cumul: ${cumul.toStringAsFixed(2)}"),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                       SizedBox(
+                         width: 100,
+                         child: TextFormField(
+                            initialValue: poste.prixUnitaire,
+                            decoration: _inputDecoration(labelText: "P.U."),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                               poste.prixUnitaire = v;
+                               setState(() {
+                                  bloc.recalculerTotalB();
+                                  _avancementCumuleController.text = bloc.avancementCumule;
+                               });
+                            },
+                         ),
+                       ),
+                       IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                             setState(() {
+                                bloc.removePosteEAAt(index);
+                                _avancementCumuleController.text = bloc.avancementCumule;
+                             });
+                          },
+                       )
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+        TextButton.icon(
+          onPressed: () => setState(() => bloc.addPosteEA()),
+          icon: const Icon(Icons.add),
+          label: const Text("Ajouter un poste"),
+        )
+      ],
     );
   }
 
-  Widget _numericInput_Mobile(TextFieldBloc bloc, String label, DocumentFormBloc formBloc, StateSetter setState, {bool highlight = false, bool isText = false}) {
-    return TextFieldBlocBuilder(
-      textFieldBloc: bloc,
-      keyboardType: isText ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        labelText: label,
-        filled: highlight,
-        fillColor: highlight ? Colors.blue[50] : null,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      ),
-      onChanged: (_) {
-        setState(() {});
-        formBloc.recalculerTotalB();
-      },
+  InputDecoration _inputDecoration({String? labelText, String? hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.blue.shade700)),
     );
   }
-  Future<void> generateEAPdf(DocumentFormBloc formBloc) async {
+}
+
+// --- GENERATION PDF EA ---
+Future<void> generateEAPdf(DocumentFormBloc formBloc, BuildContext context) async {
     final pdf = pw.Document();
-
     final font = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
-
-    // On crée un thème qui applique ces polices à tout le document
     final theme = pw.ThemeData.withFont(base: font, bold: fontBold);
 
-    // Calculs (utilisez tryParse pour éviter les crashs si un champ est vide)
-    double A = double.tryParse(formBloc.totalCommandeBase.value) ?? 0.0;
-    double G = double.tryParse(formBloc.totalSupplements.value) ?? 0.0;
-    double B = double.tryParse(formBloc.avancementCumule.value) ?? 0.0;
-    double C = double.tryParse(formBloc.retenueRetard.value) ?? 0.0;
+    double A = double.tryParse(formBloc.totalCommandeBase) ?? 0.0;
+    double G = double.tryParse(formBloc.totalSupplements) ?? 0.0;
+    double B = double.tryParse(formBloc.avancementCumule) ?? 0.0;
+    double C = double.tryParse(formBloc.retenueRetard) ?? 0.0;
 
-    double E = formBloc.facturesEmises.value.fold(
+    double E = formBloc.facturesEmises.fold(
       0.0,
-      (sum, item) => sum + (double.tryParse(item.montantHTVA.value) ?? 0.0),
+      (sum, item) => sum + (double.tryParse(item.montantHTVA) ?? 0.0),
     );
 
-    double montantMarche = A + G;
-    double soldeBase = A + G - B; // Formule (A)+(G)-(B) de l'image
-    double cumuleAFacturer = B + C; // (D) = (B) + somme(C)
+    double soldeBase = A + G - B; 
+    double cumuleAFacturer = B + C; 
+    double aFacturerMaintenant = cumuleAFacturer - E; 
+    
+    String dateDuJour = DateFormat('dd/MM/yyyy').format(formBloc.date ?? DateTime.now());
 
-    double aFacturerMaintenant = cumuleAFacturer - E; // (F) = (D) - (E)
-    String dateDuJour = DateFormat(
-      'dd/MM/yyyy',
-    ).format(formBloc.date.value ?? DateTime.now());
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -726,1091 +968,28 @@ class _NewDocumentScreenState extends State<NewDocumentScreen> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Align(
-                alignment: pw.Alignment.topRight,
-                child: pw.Text("Date ${dateDuJour}"),
-              ),
+              pw.Align(alignment: pw.Alignment.topRight, child: pw.Text("Date $dateDuJour")),
               pw.SizedBox(height: 20),
-              pw.Center(
-                child: pw.Text(
-                  "SYNTHESE D'ETAT D'AVANCEMENT",
-                  style: pw.TextStyle(
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                    decoration: pw.TextDecoration.underline,
-                  ),
-                ),
-              ),
+              pw.Center(child: pw.Text("SYNTHESE D'ETAT D'AVANCEMENT", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16))),
               pw.SizedBox(height: 20),
-
-              pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  // TABLEAU GAUCHE : INFOS CLIENT
-                  pw.Container(
-                    width: 250, // Un peu plus large pour l'adresse
-                    child: pw.Table(
-                      border: pw.TableBorder.all(),
-                      children: [
-                        _buildSimpleRow(
-                          "Client",
-                          formBloc.client.value?.nom?.toUpperCase() ?? "",
-                        ),
-                        _buildSimpleRow(
-                          "Adresse",
-                          formBloc.client.value?.adresse ?? "",
-                        ),
-                        _buildSimpleRow(
-                          "Tel",
-                          formBloc.client.value?.telephone ?? "",
-                        ),
-                        _buildSimpleRow(
-                          "Email",
-                          formBloc.client.value?.email ?? "",
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // TABLEAU DROITE : INFOS COMMANDE (Votre code existant)
-                  pw.Align(
-                    alignment: pw.Alignment.topRight,
-                    child: pw.Container(
-                      width: 200,
-                      child: pw.Table(
-                        border: pw.TableBorder.all(),
-                        children: [
-                          _buildSimpleRow(
-                            "Firme",
-                            formBloc.client.value?.nom ?? "",
-                          ),
-                          _buildSimpleRow(
-                            "N° de commande",
-                            formBloc.numCommande.value,
-                          ),
-                          _buildSimpleRow(
-                            "Période de l'EA",
-                            formBloc.periodeEA.value,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              pw.SizedBox(height: 30),
-
-              // --- Section Financière ---
-              _buildFinancialLine("Total commande =", A, "(A)"),
-              _buildFinancialLine("Total des suppléments =", G, "(G)"),
-              _buildFinancialLine(
-                "Etat d'avancement cumulé avec supplt =",
-                B,
-                "(B)",
-                isBold: true,
-              ),
-
+              
+              // Infos Client
+              pw.Text("Client: ${formBloc.client?.nom ?? ''}"),
+              pw.Text("Chantier: ${formBloc.notes}"), // Using notes as chantier name approx
+              pw.Divider(),
+              
+              // Totaux
+              pw.Text("Total Commande (A): ${A.toStringAsFixed(2)} €"),
+              pw.Text("Suppléments (G): ${G.toStringAsFixed(2)} €"),
+              pw.Text("Avancement (B): ${B.toStringAsFixed(2)} €", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text("Retenue (C): ${C.toStringAsFixed(2)} €"),
               pw.SizedBox(height: 10),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.start,
-                children: [
-                  pw.Text("Solde commande de base = "),
-                  _buildValueBox(soldeBase),
-                  pw.Text(" (A) + (G) - (B)", style: pw.TextStyle(fontSize: 8)),
-                ],
-              ),
-
-              pw.SizedBox(height: 20),
-              _buildFinancialLine(
-                "Retenue contractuelle pour retard",
-                C,
-                "(C)",
-              ),
-
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    "Cumulé à facturer = ",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  _buildValueBox(cumuleAFacturer),
-                  pw.Text(
-                    " (D) = (B) + somme (C)",
-                    style: pw.TextStyle(fontSize: 8),
-                  ),
-                ],
-              ),
-
-              pw.SizedBox(height: 20),
-              pw.Header(
-                level: 0,
-                child: pw.Text(
-                  "Détails des factures émises :",
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
-              pw.Table(
-                border: pw.TableBorder.all(),
-                children: [
-                  pw.TableRow(
-                    children: [
-                      pw.Text(" N° facture"),
-                      pw.Text(" Montant HTVA"),
-                    ],
-                  ),
-                  ...formBloc.facturesEmises.value.map(
-                    (f) => pw.TableRow(
-                      children: [
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(2),
-                          child: pw.Text(f.numFacture.value),
-                        ),
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(2),
-                          child: pw.Text("${f.montantHTVA.value} "),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              pw.SizedBox(height: 30),
-
-              pw.Header(
-                level: 0,
-                child: pw.Text(
-                  "Détails de l'avancement par poste",
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
-              pw.SizedBox(height: 10),
-
-              pw.Table(
-                border: pw.TableBorder.all(width: 0.5),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(3),
-                  // Colonne Désignation plus large
-                },
-                children: [
-                  // --- EN-TÊTE DU TABLEAU ---
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.grey200,
-                    ),
-                    children: [
-                      _cell("Désignation", isBold: true),
-                      _cell("Unité", isBold: true),
-                      _cell("Qté Tot.", isBold: true),
-                      _cell("Préc.", isBold: true),
-                      _cell("Actuel", isBold: true),
-                      _cell("Cumul", isBold: true),
-                      _cell("Reste", isBold: true),
-                      _cell("P.U. (€)", isBold: true),
-                      _cell("Total HT", isBold: true),
-                    ],
-                  ),
-
-                  // --- LIGNES DE POSTES DYNAMIQUES ---
-                  ...formBloc.postesEA.value.map((poste) {
-                    // On nettoie les valeurs pour le calcul
-                    double total =
-                        double.tryParse(
-                          poste.qteTotale.value.replaceFirst(',', '.'),
-                        ) ??
-                        0.0;
-                    double prec =
-                        double.tryParse(
-                          poste.qtePrecedente.value.replaceFirst(',', '.'),
-                        ) ??
-                        0.0;
-                    double actu =
-                        double.tryParse(
-                          poste.qteActuelle.value.replaceFirst(',', '.'),
-                        ) ??
-                        0.0;
-                    double pu =
-                        double.tryParse(
-                          poste.prixUnitaire.value.replaceFirst(',', '.'),
-                        ) ??
-                        0.0;
-
-                    double cumul = prec + actu;
-                    double reste = total - cumul;
-                    double totalHT = cumul * pu;
-
-                    return pw.TableRow(
-                      children: [
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text(
-                            poste.designation.value,
-                            style: const pw.TextStyle(fontSize: 8),
-                          ),
-                        ),
-                        _cell(poste.unite.value),
-                        _cell(total.toStringAsFixed(2)),
-                        _cell(prec.toStringAsFixed(2)),
-                        _cell(
-                          actu.toStringAsFixed(2),
-                          color: PdfColors.blue700,
-                        ),
-                        _cell(cumul.toStringAsFixed(2), isBold: true),
-                        _cell(
-                          reste.toStringAsFixed(2),
-                          color: reste < 0 ? PdfColors.red : PdfColors.black,
-                        ),
-                        _cell(pu.toStringAsFixed(2)),
-                        _cell(totalHT.toStringAsFixed(2), isBold: true),
-                      ],
-                    );
-                  }).toList(),
-                ],
-              ),
-
-              // --- TOTAL FINAL EN BAS DE PAGE 2 ---
-              pw.Container(
-                alignment: pw.Alignment.centerRight,
-                padding: const pw.EdgeInsets.symmetric(vertical: 10),
-                child: pw.Text(
-                  "MONTANT TOTAL CUMULÉ (B) : ${formBloc.avancementCumule.value} €",
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
-              pw.Spacer(),
-
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    "Total factures émises = ",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  _buildValueBox(E),
-                  pw.Text(" (E)", style: pw.TextStyle(fontSize: 8)),
-                ],
-              ),
-              pw.SizedBox(height: 10),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    "A FACTURER = ",
-                    style: pw.TextStyle(
-                      fontSize: 14,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.Container(
-                    padding: pw.EdgeInsets.all(5),
-                    child: pw.Text(
-                      "${aFacturerMaintenant.toStringAsFixed(2)} ",
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                    ),
-                  ),
-                  pw.Text(" (F) = (D) - (E)", style: pw.TextStyle(fontSize: 8)),
-                ],
-              ),
+              pw.Text("A FACTURER: ${aFacturerMaintenant.toStringAsFixed(2)} €", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
             ],
           );
         },
       ),
     );
+    
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
-  }
-
-  pw.Widget _cell(
-    String text, {
-    bool isBold = false,
-    PdfColor color = PdfColors.black,
-    double fontSize = 8,
-  }) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(4),
-      child: pw.Text(
-        text,
-        textAlign: pw.TextAlign.center,
-        style: pw.TextStyle(
-          fontSize: fontSize,
-          fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  // Helpers pour le style du tableau
-  pw.TableRow _buildSimpleRow(String label, String value) {
-    return pw.TableRow(
-      children: [
-        pw.Padding(
-          padding: pw.EdgeInsets.all(4),
-          child: pw.Text(label, style: pw.TextStyle(fontSize: 9)),
-        ),
-        pw.Padding(
-          padding: pw.EdgeInsets.all(4),
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _buildValueBox(double value) {
-    return pw.Container(
-      width: 80,
-      margin: pw.EdgeInsets.symmetric(horizontal: 5),
-      padding: pw.EdgeInsets.all(2),
-      child: pw.Text(
-        "${value.toStringAsFixed(2)}",
-        textAlign: pw.TextAlign.right,
-      ),
-    );
-  }
-
-  pw.Widget _buildFinancialLine(
-    String label,
-    double value,
-    String index, {
-    bool isBold = false,
-  }) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.end,
-        // Aligne tout vers la droite comme sur l'image
-        children: [
-          // Libellé de la ligne
-          pw.Text(
-            label,
-            style: pw.TextStyle(
-              fontSize: 10,
-              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-            ),
-          ),
-          pw.SizedBox(width: 10),
-          // Boîte du montant
-          pw.Container(
-            width: 100,
-            padding: const pw.EdgeInsets.all(4),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.black, width: 1),
-            ),
-            child: pw.Text(
-              "${value.toStringAsFixed(2)} ",
-              textAlign: pw.TextAlign.right,
-              style: pw.TextStyle(
-                fontSize: 10,
-                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              ),
-            ),
-          ),
-          // Indice de référence (A, G, B...)
-          pw.Container(
-            width: 25,
-            padding: const pw.EdgeInsets.only(left: 5),
-            child: pw.Text(
-              index,
-              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEASection(BuildContext context, DocumentFormBloc formBloc) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.5,
-      width: MediaQuery.of(context).size.width,
-
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.numCommande,
-                  isEnabled: false,
-                  decoration: const InputDecoration(labelText: 'N° Commande'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.periodeEA,
-                  decoration: const InputDecoration(
-                    labelText: 'Période de l\'EA ',
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.totalCommandeBase,
-                  decoration: const InputDecoration(
-                    labelText: 'Total Commande (A)',
-                    suffixText: '',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.totalSupplements,
-                  decoration: const InputDecoration(
-                    labelText: 'Suppléments (G)',
-                    suffixText: '',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.avancementCumule,
-                  decoration: const InputDecoration(
-                    labelText: 'Etat d\'avancement cumulé avec supplt (B)',
-                    suffixText: '',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.retenueRetard,
-                  decoration: const InputDecoration(
-                    labelText: 'Retenue contractuelle pour retard (C)',
-                    suffixText: '',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-          const Text(
-            "Factures déjà émises (E)",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-          ),
-
-          BlocBuilder<
-            ListFieldBloc<FactureInfoFieldBloc, dynamic>,
-            ListFieldBlocState<FactureInfoFieldBloc, dynamic>
-          >(
-            bloc: formBloc.facturesEmises,
-            builder: (context, state) {
-              if (state.fieldBlocs.isEmpty) {
-                return Text("Aucune facture émise");
-              }
-
-              return SizedBox(
-                height:isMobile  ? 80 :  200,
-
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: state.fieldBlocs.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final fieldBloc = entry.value;
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: TextFieldBlocBuilder(
-                              textFieldBloc: fieldBloc.numFacture,
-                              decoration: InputDecoration(
-                                labelText: 'N° Facture',
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: TextFieldBlocBuilder(
-                              textFieldBloc: fieldBloc.montantHTVA,
-                              decoration: InputDecoration(
-                                labelText: 'Montant',
-                                suffixText: '€',
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => formBloc.facturesEmises
-                                .removeFieldBlocAt(index),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              );
-            },
-          ),
-          TextButton.icon(
-            onPressed: () {
-              final uniqueName =
-                  'facture_${DateTime.now().millisecondsSinceEpoch}';
-              formBloc.facturesEmises.addFieldBloc(
-                FactureInfoFieldBloc.create(uniqueName),
-              );
-            },
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Ajouter une facture émise'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailsTab(DocumentFormBloc formBloc) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.35,
-      width: MediaQuery.of(context).size.width,
-      child: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTableHeader(),
-                    const Divider(),
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      height:isMobile  ? 80 :  200,
-
-                      child:
-                          BlocBuilder<
-                            ListFieldBloc<PosteEAFieldBloc, dynamic>,
-                            ListFieldBlocState<PosteEAFieldBloc, dynamic>
-                          >(
-                            bloc: formBloc.postesEA,
-                            builder: (context, state) {
-                              if (state.fieldBlocs.isEmpty) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Text(
-                                    "Aucun poste ajouté. Cliquez sur le bouton '+' pour commencer.",
-                                  ),
-                                );
-                              }
-                              return SingleChildScrollView(
-                                child: Column(
-                                  children: state.fieldBlocs
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                        final index = entry.key;
-                                        final poste = entry.value;
-                                        return _buildPosteRow(
-                                          poste,
-                                          formBloc,
-                                          index,
-                                        );
-                                      })
-                                      .toList(),
-                                ),
-                              );
-                            },
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.grey[200],
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // On crée un nom unique pour le nouveau groupe
-                    final uniqueName =
-                        'poste_${DateTime.now().millisecondsSinceEpoch}';
-                    formBloc.postesEA.addFieldBloc(
-                      PosteEAFieldBloc.create(uniqueName),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text("Ajouter un Poste"),
-                ),
-                // Affichage du total en temps réel en bas du tableau
-                BlocBuilder<TextFieldBloc, TextFieldBlocState>(
-                  bloc: formBloc.avancementCumule,
-                  builder: (context, state) => Text(
-                    "Total (B) : ${state.value} €",
-                    style:  TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: isMobile ? 12 : 18,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Header du tableau
-  Widget _buildTableHeader() {
-    return Row(
-      children:  [
-        SizedBox(
-          width: isMobile ? 50 :  400,
-          child: Text(
-            "Désignation",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        SizedBox(width: isMobile ? 40 : 80, child: Text("Unité", textAlign: TextAlign.center)),
-        SizedBox(
-          width: isMobile ? 40 : 100,
-          child: Text("Qté Tot.", textAlign: TextAlign.center),
-        ),
-        SizedBox(width: isMobile ? 40 : 100, child: Text("Préc.", textAlign: TextAlign.center)),
-        SizedBox(
-          width: isMobile ? 40 :100,
-          child: Text("Actuel", textAlign: TextAlign.center),
-        ),
-        SizedBox(width: isMobile ? 40 : 100, child: Text("Cumul", textAlign: TextAlign.center)),
-        SizedBox(width: isMobile ? 40 : 100, child: Text("Reste", textAlign: TextAlign.center)),
-        SizedBox(width: isMobile ? 40 : 100, child: Text("P.U.", textAlign: TextAlign.center)),
-        SizedBox( width: isMobile ? 50:  50),
-      ],
-    );
-  }
-
-  Widget _buildPosteRow(
-    PosteEAFieldBloc poste,
-    DocumentFormBloc formBloc,
-    int index,
-  ) {
-    // On utilise un StatefulBuilder pour avoir accès à "setState" localement
-    return StatefulBuilder(
-      builder: (context, setState) {
-        // Calculs frais à chaque "setState"
-        double total =
-            double.tryParse(poste.qteTotale.value.replaceFirst(',', '.')) ??
-            0.0;
-        double prec =
-            double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ??
-            0.0;
-        double actu =
-            double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ??
-            0.0;
-        double pu =
-            double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ??
-            0.0;
-
-        double cumul = prec + actu;
-        double reste = total - cumul;
-        double montantLigne = cumul * pu;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: isMobile ? 80 : 400,
-                child: TextFieldBlocBuilder(textFieldBloc: poste.designation),
-              ),
-              SizedBox(
-                width: isMobile ? 40:  80,
-                child: TextFieldBlocBuilder(textFieldBloc: poste.unite),
-              ),
-
-              // CHAMPS DE SAISIE AVEC APPEL À setState
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: _numericField(poste.qteTotale, formBloc, setState),
-              ),
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: _numericField(poste.qtePrecedente, formBloc, setState),
-              ),
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: _numericField(poste.qteActuelle, formBloc, setState),
-              ),
-
-              // AFFICHAGE CUMUL
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: Center(
-                  child: Text(
-                    cumul.toStringAsFixed(2),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-              ),
-
-              // AFFICHAGE RESTE
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: Center(
-                  child: Text(
-                    reste.toStringAsFixed(2),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: reste < 0 ? Colors.red : Colors.green,
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(
-                width: isMobile ? 40:  100,
-                child: _numericField(poste.prixUnitaire, formBloc, setState),
-              ),
-
-              // AFFICHAGE TOTAL LIGNE €
-              SizedBox(
-                width: isMobile ? 20:  100,
-                child: Center(
-                  child: Text(
-                    montantLigne.toStringAsFixed(2) + " €",
-                    style: TextStyle(fontSize: 10),
-                  ),
-                ),
-              ),
-
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => formBloc.postesEA.removeFieldBlocAt(index),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _numericField(
-    TextFieldBloc bloc,
-    DocumentFormBloc formBloc,
-    StateSetter setState,
-  ) {
-    return TextFieldBlocBuilder(
-      textFieldBloc: bloc,
-      // keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      // decoration: const InputDecoration(isDense: true),
-      onChanged: (val) {
-        // 1. On force le widget local à se redessiner pour le Cumul/Reste
-        setState(() {});
-        // 2. On demande au bloc de recalculer le montant (B) global
-        formBloc.recalculerTotalB();
-      },
-    );
-  }
-
-  Widget _buildCalculatedCell(
-    PosteEAFieldBloc poste,
-    double Function(PosteEAFieldBloc) calc,
-  ) {
-    return Container(
-      alignment: Alignment.center,
-      child: Text(
-        calc(poste).toStringAsFixed(2),
-        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500)),
-    );
-  }
-
-  InputDecoration _inputDecoration({
-    required String hintText,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hintText,
-      suffixIcon: suffixIcon,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.blue.shade700, width: 1.5),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextFieldBloc bloc, String label, String hint) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel(label),
-        TextFieldBlocBuilder(
-          textFieldBloc: bloc,
-          maxLines: label == "Notes" ? 4 : 1,
-          decoration: _inputDecoration(hintText: hint),
-          textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateField(BuildContext context) {
-    final bloc = BlocProvider.of<DocumentFormBloc>(context).date;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Date'),
-        DateTimeFieldBlocBuilder(
-          dateTimeFieldBloc: bloc,
-          textStyle: TextStyle(fontSize: isMobile ? 12 : 16),
-          format: DateFormat('dd/MM/yyyy'),
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
-          decoration: _inputDecoration(
-            hintText: 'JJ/MM/AAAA',
-            suffixIcon: const Icon(
-              Icons.calendar_today,
-              size: 20,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTypeField(BuildContext context) {
-    final bloc = BlocProvider.of<DocumentFormBloc>(context).type;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Type'),
-        DropdownFieldBlocBuilder<String>(
-          selectFieldBloc: bloc,
-          decoration: _inputDecoration(hintText: "Facture ou Devis"),
-          itemBuilder: (context, value) => FieldItem(child: Text(value)),
-          textStyle: TextStyle(fontSize: isMobile ? 14 : 16),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusField(BuildContext context, DocumentFormBloc bloc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildLabel('Status'),
-        DropdownFieldBlocBuilder<String>(
-          selectFieldBloc: bloc.status,
-          decoration: _inputDecoration(hintText: "Statut du document"),
-          itemBuilder: (context, value) => FieldItem(child: Text(value)),
-          textStyle: TextStyle(fontSize: isMobile ? 14 : 16),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTotals(BuildContext context, DocumentFormBloc docBloc) {
-    return Column(
-      children: [
-        _buildTotalRow("Total TTC", docBloc.totalTTC),
-        const SizedBox(height: 10),
-        _buildTotalRow(
-          "Total TTC à payer",
-          docBloc.totalTTCAPayer,
-          isPrimary: true,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTotalRow(
-    String label,
-    TextFieldBloc bloc, {
-    bool isPrimary = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
-            color: isPrimary ? Colors.blue.shade800 : Colors.black87,
-          ),
-        ),
-        SizedBox(
-          width: 150,
-          child: TextFieldBlocBuilder(
-            textFieldBloc: bloc,
-            readOnly: true,
-            decoration: _inputDecoration(hintText: ''),
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
-              color: isPrimary ? Colors.blue.shade800 : Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildArticleList(BuildContext context, DocumentFormBloc docBloc) {
-    print("lenght articleBlocs ${docBloc.articleBlocs..length}");
-
-    return StreamBuilder<
-      FieldBlocState<List<ArticleFormBloc>, dynamic, dynamic>
-    >(
-      stream: docBloc.articlesListState.stream,
-      builder: (context, snapshot) {
-        if (docBloc.articleBlocs.isEmpty && !snapshot.hasData) {
-          return Center(
-            child: TextButton.icon(
-              onPressed: docBloc.delete,
-              icon: const Icon(Icons.add_circle, color: Colors.blue),
-              label: const Text("Ajouter le premier article"),
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            ...docBloc.articleBlocs.asMap().entries.map((entry) {
-              print("articleBlocs ${docBloc.articleBlocs.length}");
-              print("int ${entry.value.articleData.description}");
-              final index = entry.key;
-              final itemBloc = entry.value;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Article #${index + 1}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.remove_circle,
-                              color: Colors.red,
-                            ),
-                            onPressed: () => docBloc.removeArticleAt(index),
-                          ),
-                        ],
-                      ),
-
-                      // Utilisation des champs TextFieldBlocBuilder classiques
-                      _buildTextField(
-                        itemBloc.description,
-                        "Description",
-                        "Ex: Rénovation Mur",
-                      ),
-                      const SizedBox(height: 10),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              itemBloc.quantite,
-                              "Quantité",
-                              "1",
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildTextField(
-                              itemBloc.prixUnitaire,
-                              "Prix U. HT",
-                              "100",
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Affichage du Total (Écoute sur le stream de prixUnitaire pour le rebuild)
-                      StreamBuilder(
-                        stream: itemBloc.prixUnitaire.stream,
-                        builder: (context, _) {
-                          final article = itemBloc.articleData;
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Text(
-                              "Total Article: ${article.total ?? 0} ",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade700,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-
-            // Bouton Ajouter
-            const SizedBox(height: 10),
-            TextButton.icon(
-              onPressed: docBloc.delete,
-              icon: const Icon(Icons.add_circle, color: Colors.blue),
-              label: const Text("Ajouter un article"),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

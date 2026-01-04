@@ -1,14 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+// import 'package:flutter_form_bloc/flutter_form_bloc.dart'; // SUPPRIMÉ
+
 import '../blocs/client_form_bloc.dart';
 import '../model/client.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
-
-
 
 class ClientManagementScreen extends StatefulWidget {
   const ClientManagementScreen({super.key});
@@ -41,10 +40,12 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
   }
 
   void _showAddClientModal(BuildContext context) async {
-
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const _ClientForm(),
+        builder: (context) => BlocProvider(
+          create: (context) => ClientFormBloc(),
+          child: const _ClientForm(),
+        ),
       ),
     );
 
@@ -65,23 +66,8 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
           print("exception list chantier $e");
         }
       }
-
     }
   }
- /* void _showAddClientModal() async {
-    // Utiliser showModalBottomSheet pour une meilleure gestion du clavier
-    final result = await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true, // IMPORTANT pour la gestion du clavier
-      builder: (context) {
-        return BlocProvider(
-          create: (context) => ClientFormBloc(),
-          child: const _ClientForm(),
-        );
-      },
-    );
-
-  }*/
 
   final ScrollController scrollController = ScrollController();
   bool isMobile =
@@ -150,7 +136,6 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
     );
   }
 
-  // --- Widget pour la DataTable ---
   Widget _buildClientsDataTable() {
     return DataTable(
       columns: const [
@@ -202,40 +187,60 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
   }
 }
 
-class _ClientForm extends StatelessWidget {
+class _ClientForm extends StatefulWidget {
   const _ClientForm();
 
   @override
-  Widget build(BuildContext context) {
-    final formBloc = BlocProvider.of<ClientFormBloc>(context);
+  State<_ClientForm> createState() => _ClientFormState();
+}
 
-    // Utiliser FormBlocListener pour gérer le succès/échec
+class _ClientFormState extends State<_ClientForm> {
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
+  final TextEditingController _villeController = TextEditingController();
+  final TextEditingController _paysController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nomController.dispose();
+    _emailController.dispose();
+    _telephoneController.dispose();
+    _adresseController.dispose();
+    _villeController.dispose();
+    _paysController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formBloc = context.read<ClientFormBloc>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title:    Text(
+        title: Text(
           'Ajouter un Nouveau Client',
           style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
-      body: FormBlocListener<ClientFormBloc, String, String>(
-        onSubmitting: (context, state) {
-          LoadingDialog.show(context);
-      
-        },
-        onSuccess: (context, state) {
-          LoadingDialog.hide(context);
-      
-          ScaffoldMessenger.of(context)..showSnackBar(
-            SnackBar(content: Text(state.successResponse!)),
-          );
-          Navigator.of(context).pop(true);
-        },
-        onFailure: (context, state) {
-          LoadingDialog.hide(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
-          );
+      body: BlocListener<ClientFormBloc, ClientFormState>(
+        listener: (context, state) {
+          if (state is ClientFormLoading) {
+            LoadingDialog.show(context);
+          } else if (state is ClientFormSuccess) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context)..showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+            Navigator.of(context).pop(true);
+          } else if (state is ClientFormFailure) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(40.0),
@@ -244,38 +249,66 @@ class _ClientForm extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.nom,
-                  decoration: const InputDecoration(labelText: 'Nom (Obligatoire)'),
+                
+                TextFormField(
+                  controller: _nomController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom (Obligatoire)',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: formBloc.updateNom,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.email,
+                TextFormField(
+                  controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email (Obligatoire)',
+                    border: OutlineInputBorder(),
                   ),
+                  keyboardType: TextInputType.emailAddress,
+                  onChanged: formBloc.updateEmail,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.telephone,
-                  decoration: const InputDecoration(labelText: 'Téléphone'),
+                TextFormField(
+                  controller: _telephoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Téléphone',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  onChanged: formBloc.updateTelephone,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.adresse,
-                  decoration: const InputDecoration(labelText: 'Adresse'),
+                TextFormField(
+                  controller: _adresseController,
+                  decoration: const InputDecoration(
+                    labelText: 'Adresse',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: formBloc.updateAdresse,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.ville,
-                  decoration: const InputDecoration(labelText: 'Ville'),
+                TextFormField(
+                  controller: _villeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ville',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: formBloc.updateVille,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.pays,
-                  decoration: const InputDecoration(labelText: 'Pays'),
+                TextFormField(
+                  controller: _paysController,
+                  decoration: const InputDecoration(
+                    labelText: 'Pays',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: formBloc.updatePays,
                 ),
 
                 const SizedBox(height: 20),
@@ -283,8 +316,15 @@ class _ClientForm extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: formBloc.submit,
-                    // Utilise la fonction submit du FormBloc
+                    onPressed: () {
+                      formBloc.updateNom(_nomController.text);
+                      formBloc.updateEmail(_emailController.text);
+                      formBloc.updateTelephone(_telephoneController.text);
+                      formBloc.updateAdresse(_adresseController.text);
+                      formBloc.updateVille(_villeController.text);
+                      formBloc.updatePays(_paysController.text);
+                      formBloc.submit();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       shape: RoundedRectangleBorder(

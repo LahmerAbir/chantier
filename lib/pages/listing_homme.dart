@@ -1,14 +1,15 @@
 import 'package:chantier/model/homme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+// import 'package:flutter_form_bloc/flutter_form_bloc.dart'; // SUPPRIMÉ
 
 import '../blocs/homme_form_bloc.dart';
 import '../model/simple_entity.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
-import 'entity_add.dart';
+// import 'entity_add.dart';
 
 class HommeManagementScreen extends StatefulWidget {
   final String title;
@@ -58,7 +59,12 @@ class _EntityManagementScreenState extends State<HommeManagementScreen> {
   void _showAddHommeModal(BuildContext context) async {
     final result = await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (context) => const HommeForm()));
+    ).push(MaterialPageRoute(builder: (context) => 
+        BlocProvider(
+          create: (context) => HommeFormBloc(),
+          child: const HommeForm()
+        )
+    ));
 
     if (result == true) {
       {
@@ -189,12 +195,38 @@ class _EntityManagementScreenState extends State<HommeManagementScreen> {
   }
 }
 
-class HommeForm extends StatelessWidget {
+class HommeForm extends StatefulWidget {
   const HommeForm({super.key});
 
   @override
+  State<HommeForm> createState() => _HommeFormState();
+}
+
+class _HommeFormState extends State<HommeForm> {
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _prenomController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  final TextEditingController _specialiteController = TextEditingController();
+  final TextEditingController _coutJournalierController = TextEditingController(text: "0");
+  
+  // Pour le dropdown
+  String _selectedType = 'ouvrier';
+
+  @override
+  void dispose() {
+    _nomController.dispose();
+    _prenomController.dispose();
+    _emailController.dispose();
+    _telephoneController.dispose();
+    _specialiteController.dispose();
+    _coutJournalierController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formBloc = BlocProvider.of<HommeFormBloc>(context);
+    final formBloc = context.read<HommeFormBloc>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -204,22 +236,21 @@ class HommeForm extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
-      body: FormBlocListener<HommeFormBloc, String, String>(
-        onSubmitting: (context, state) {
-          LoadingDialog.show(context);
-        },
-        onSuccess: (context, state) {
-          LoadingDialog.hide(context);
-
-          ScaffoldMessenger.of(context)
-            ..showSnackBar(SnackBar(content: Text(state.successResponse!)));
-          Navigator.of(context).pop(true);
-        },
-        onFailure: (context, state) {
-          LoadingDialog.hide(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
-          );
+      body: BlocListener<HommeFormBloc, HommeFormState>(
+        listener: (context, state) {
+          if (state is HommeFormLoading) {
+            LoadingDialog.show(context);
+          } else if (state is HommeFormSuccess) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context)
+              ..showSnackBar(SnackBar(content: Text(state.message)));
+            Navigator.of(context).pop(true);
+          } else if (state is HommeFormFailure) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
+          }
         },
 
         child: SingleChildScrollView(
@@ -234,55 +265,104 @@ class HommeForm extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Divider(),
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.nom,
+              TextFormField(
+                controller: _nomController,
                 decoration: const InputDecoration(
                   labelText: 'Nom (Obligatoire)',
+                  border: OutlineInputBorder(),
                 ),
+                onChanged: formBloc.updateNom,
               ),
+              const SizedBox(height: 15),
 
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.prenom,
+              TextFormField(
+                controller: _prenomController,
                 decoration: const InputDecoration(
                   labelText: 'Prénom (Obligatoire)',
+                  border: OutlineInputBorder(),
                 ),
+                onChanged: formBloc.updatePrenom,
               ),
+              const SizedBox(height: 15),
 
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.email,
-                decoration: const InputDecoration(labelText: 'Email'),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.emailAddress,
+                onChanged: formBloc.updateEmail,
               ),
-
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.specialite,
-                decoration: const InputDecoration(labelText: 'Spécialité'),
-              ),
-              SizedBox(
-                height: 80,
-                child: DropdownFieldBlocBuilder<String>(
-                  selectFieldBloc: formBloc.type,
-                  textStyle: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Type de poste',
-                    labelStyle: TextStyle(color: Colors.black)
-                  ),
-                  itemBuilder: (context, value) => FieldItem(
-                    child: Text(value ,style:  TextStyle(color: Colors.black),),
-                  ),
-
+              const SizedBox(height: 15),
+              
+              TextFormField(
+                controller: _telephoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Téléphone',
+                  border: OutlineInputBorder(),
                 ),
+                keyboardType: TextInputType.phone,
+                onChanged: formBloc.updateTelephone,
               ),
-              TextFieldBlocBuilder(
-                textFieldBloc: formBloc.coutJournalier,
-                decoration: const InputDecoration(labelText: 'Coût Journalier'),
+              const SizedBox(height: 15),
+
+              TextFormField(
+                controller: _specialiteController,
+                decoration: const InputDecoration(
+                  labelText: 'Spécialité',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: formBloc.updateSpecialite,
+              ),
+              const SizedBox(height: 15),
+              
+              DropdownButtonFormField<String>(
+                value: _selectedType,
+                decoration: const InputDecoration(
+                    labelText: 'Type de poste',
+                    border: OutlineInputBorder(),
+                ),
+                items: formBloc.typesDisponibles.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedType = newValue!;
+                    formBloc.updateType(newValue);
+                  });
+                },
+              ),
+              const SizedBox(height: 15),
+              
+              TextFormField(
+                controller: _coutJournalierController,
+                decoration: const InputDecoration(
+                  labelText: 'Coût Journalier',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.number,
+                onChanged: formBloc.updateCoutJournalier,
               ),
 
               const SizedBox(height: 20),
 
               ElevatedButton.icon(
-                onPressed: formBloc.submit,
+                onPressed: () {
+                  // Final update just in case
+                  formBloc.updateNom(_nomController.text);
+                  formBloc.updatePrenom(_prenomController.text);
+                  formBloc.updateEmail(_emailController.text);
+                  formBloc.updateTelephone(_telephoneController.text);
+                  formBloc.updateSpecialite(_specialiteController.text);
+                  formBloc.updateCoutJournalier(_coutJournalierController.text);
+                  formBloc.updateType(_selectedType);
+                  
+                  formBloc.submit();
+                },
                 icon: const Icon(Icons.person_add),
                 label: const Text('Enregistrer l\'Employé'),
               ),

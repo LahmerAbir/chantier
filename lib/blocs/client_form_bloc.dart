@@ -1,72 +1,93 @@
-// Fichier: lib/form_blocs/client_form_bloc.dart
-
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chantier/repository/chantier_repository.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
-import '../model/client.dart';
-
-class ClientFormBloc extends FormBloc<String, String> {
-
-  // 1. Déclaration des FieldBlocs
-  final nom = TextFieldBloc(
-    validators: [FieldBlocValidators.required],
-  );
-
-  final email = TextFieldBloc(
-    validators: [
-      FieldBlocValidators.required,
-      FieldBlocValidators.email,
-    ],
-  );
-
-  final telephone = TextFieldBloc();
-  final adresse = TextFieldBloc();
-  final ville = TextFieldBloc();
-  final pays = TextFieldBloc();
-
-  ClientFormBloc() {
-    // 2. Enregistrement des FieldBlocs
-    addFieldBlocs(
-      fieldBlocs: [
-        nom,
-        email,
-        telephone,
-        adresse,
-        ville,
-        pays,
-      ],
-    );
-  }
-
+// --- ÉTATS ---
+abstract class ClientFormState extends Equatable {
+  const ClientFormState();
   @override
-  void onSubmitting() async {
+  List<Object?> get props => [];
+}
+
+class ClientFormInitial extends ClientFormState {}
+
+class ClientFormLoading extends ClientFormState {}
+
+class ClientFormSuccess extends ClientFormState {
+  final String message;
+  const ClientFormSuccess(this.message);
+  @override
+  List<Object?> get props => [message];
+}
+
+class ClientFormFailure extends ClientFormState {
+  final String error;
+  const ClientFormFailure(this.error);
+  @override
+  List<Object?> get props => [error];
+}
+
+// --- CUBIT ---
+class ClientFormBloc extends Cubit<ClientFormState> {
+  ClientFormBloc() : super(ClientFormInitial());
+
+  String nom = '';
+  String email = '';
+  String telephone = '';
+  String adresse = '';
+  String ville = '';
+  String pays = '';
+
+  void updateNom(String value) => nom = value;
+  void updateEmail(String value) => email = value;
+  void updateTelephone(String value) => telephone = value;
+  void updateAdresse(String value) => adresse = value;
+  void updateVille(String value) => ville = value;
+  void updatePays(String value) => pays = value;
+
+  Future<void> submit() async {
+    // Validation
+    if (nom.isEmpty) {
+      emit(const ClientFormFailure("Le nom est obligatoire"));
+      emit(ClientFormInitial());
+      return;
+    }
+    
+    if (email.isEmpty) {
+       emit(const ClientFormFailure("L'email est obligatoire"));
+       emit(ClientFormInitial());
+       return;
+    }
+
+    // Validation email simple
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      emit(const ClientFormFailure("Format d'email invalide"));
+      emit(ClientFormInitial());
+      return;
+    }
+
+    emit(ClientFormLoading());
+
     try {
-      final newClientData = Client(
-        nom: nom.value,
-        email: email.value,
-        telephone: telephone.value,
-        adresse: adresse.value,
-        ville: ville.value,
-        pays: pays.value,
+      var res = await ChantierRepository().addClient(
+        nom: nom,
+        email: email,
+        telephone: telephone,
+        adresse: adresse,
+        ville: ville,
+        pays: pays,
       );
-
-      var res = await ChantierRepository().addClient(nom: nom.value,
-        email: email.value,
-        telephone: telephone.value,
-        adresse: adresse.value,
-        ville: ville.value,
-        pays: pays.value,);
-      if (res != null)
-        emitSuccess(
-          canSubmitAgain: true,
-          successResponse: 'Client créé avec succès.',
-
-        );
-      else
-        emitFailure(failureResponse: 'Erreur lors de la création du client');
+      
+      if (res != null) {
+        emit(const ClientFormSuccess('Client créé avec succès.'));
+      } else {
+        emit(const ClientFormFailure('Erreur lors de la création du client'));
+        emit(ClientFormInitial());
+      }
     } catch (e) {
-      emitFailure(failureResponse: 'Erreur lors de la création du client: ${e
-          .toString()}');
+      emit(ClientFormFailure('Erreur: ${e.toString()}'));
+      emit(ClientFormInitial());
     }
   }
 }

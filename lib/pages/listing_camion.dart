@@ -1,14 +1,15 @@
 import 'package:chantier/model/homme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+// import 'package:flutter_form_bloc/flutter_form_bloc.dart'; // SUPPRIMÉ
 
 import '../blocs/camion_form_bloc.dart';
 import '../model/simple_entity.dart';
 import '../repository/chantier_repository.dart';
 import '../ui/common/loading.dart';
 import '../ui/common/loading_dialog.dart';
-import 'entity_add.dart';
+// import 'entity_add.dart'; // Si nécessaire
 
 class CamionManagementScreen extends StatefulWidget {
   final String title;
@@ -58,7 +59,12 @@ class _EntityManagementScreenState extends State<CamionManagementScreen> {
   void _showAddCamionModal(BuildContext context) async {
     final result = await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (context) => const CamionForm()));
+    ).push(MaterialPageRoute(builder: (context) => 
+       BlocProvider(
+         create: (context) => CamionFormBloc(),
+         child: const CamionForm()
+       )
+    ));
 
     if (result == true) {
       {
@@ -189,12 +195,31 @@ class _EntityManagementScreenState extends State<CamionManagementScreen> {
   }
 }
 
-class CamionForm extends StatelessWidget {
+class CamionForm extends StatefulWidget {
   const CamionForm({super.key});
 
   @override
+  State<CamionForm> createState() => _CamionFormState();
+}
+
+class _CamionFormState extends State<CamionForm> {
+  // Contrôleurs
+  final TextEditingController _nomController = TextEditingController();
+  final TextEditingController _immatriculationController = TextEditingController();
+  final TextEditingController _capaciteController = TextEditingController(text: "0");
+
+  @override
+  void dispose() {
+    _nomController.dispose();
+    _immatriculationController.dispose();
+    _capaciteController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formBloc = BlocProvider.of<CamionFormBloc>(context);
+    // Le bloc est fourni par le parent via BlocProvider
+    final formBloc = context.read<CamionFormBloc>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -204,24 +229,22 @@ class CamionForm extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
-      body: FormBlocListener<CamionFormBloc, String, String>(
-        onSubmitting: (context, state) {
-          LoadingDialog.show(context);
+      body: BlocListener<CamionFormBloc, CamionFormState>(
+        listener: (context, state) {
+          if (state is CamionFormLoading) {
+            LoadingDialog.show(context);
+          } else if (state is CamionFormSuccess) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context)
+              ..showSnackBar(SnackBar(content: Text(state.message)));
+            Navigator.of(context).pop(true);
+          } else if (state is CamionFormFailure) {
+            LoadingDialog.hide(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
+          }
         },
-        onSuccess: (context, state) {
-          LoadingDialog.hide(context);
-
-          ScaffoldMessenger.of(context)
-            ..showSnackBar(SnackBar(content: Text(state.successResponse!)));
-          Navigator.of(context).pop(true);
-        },
-        onFailure: (context, state) {
-          LoadingDialog.hide(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.failureResponse ?? 'Erreur inconnue')),
-          );
-        },
-
         child: Padding(
           padding: const EdgeInsets.all(40.0),
           child: SingleChildScrollView(
@@ -231,28 +254,46 @@ class CamionForm extends StatelessWidget {
               children: [
                 const Divider(),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.nom,
+                TextFormField(
+                  controller: _nomController,
                   decoration: const InputDecoration(
                     labelText: 'Nom (Obligatoire)',
+                    border: OutlineInputBorder(),
                   ),
+                  onChanged: formBloc.updateNom,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.immatriculation,
-                  decoration: const InputDecoration(labelText: 'Matricule'),
+                TextFormField(
+                  controller: _immatriculationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Matricule (Obligatoire)',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: formBloc.updateImmatriculation,
                 ),
+                const SizedBox(height: 15),
 
-                TextFieldBlocBuilder(
-                  textFieldBloc: formBloc.capaciteCharge,
-                  decoration: const InputDecoration(labelText: 'Capacité '),
+                TextFormField(
+                  controller: _capaciteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Capacité',
+                    border: OutlineInputBorder(),
+                  ),
                   keyboardType: TextInputType.number,
+                  onChanged: formBloc.updateCapacite,
                 ),
 
                 const SizedBox(height: 20),
 
                 ElevatedButton.icon(
-                  onPressed: formBloc.submit,
+                  onPressed: () {
+                    // Update final avant submit
+                    formBloc.updateNom(_nomController.text);
+                    formBloc.updateImmatriculation(_immatriculationController.text);
+                    formBloc.updateCapacite(_capaciteController.text);
+                    formBloc.submit();
+                  },
                   icon: const Icon(Icons.local_shipping),
                   label: const Text('Enregistrer le Camion'),
                 ),

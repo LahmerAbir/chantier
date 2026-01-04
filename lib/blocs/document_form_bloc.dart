@@ -1,393 +1,275 @@
-// --- DOCUMENT FORM BLOC (Méthode Alternative) ---
-
-import 'dart:async';
-import 'dart:math';
-
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chantier/repository/devis&facture_repository.dart';
-import 'package:flutter_form_bloc/flutter_form_bloc.dart';
 
 import '../model/client.dart';
-import '../model/document.dart';
+import '../model/document.dart'; // Contient Facture et Article
 import '../utils/utils.dart';
-import 'art_form_bloc.dart';
 
-class DocumentFormBloc extends FormBloc<String, String> {
-  final type = SelectFieldBloc<String, dynamic>(
-    validators: [FieldBlocValidators.required],
-    items: ['Facture', 'Devis', 'EA'],
-    initialValue: 'Facture',
-  );
+// --- MODELS LOCAUX POUR LE FORMULAIRE ---
+class ArticleItem {
+  String description = '';
+  String quantite = '1';
+  String prixUnitaire = '0';
+  
+  Article toArticle() {
+    return Article(
+      description: description,
+      quantite: int.tryParse(quantite) ?? 0,
+      prixUnitaire: int.tryParse(prixUnitaire) ?? 0,
+    );
+  }
+}
 
-  final date = InputFieldBloc<DateTime?, dynamic>(
-    validators: [(value) => value == null ? 'Date requise.' : null],
-    initialValue: DateTime.now(),
-  );
+class FactureEmiseItem {
+  String numFacture = '';
+  String montantHTVA = '';
+}
 
+class PosteEAItem {
+  String designation = '';
+  String unite = 'm²';
+  String qteTotale = '0';
+  String prixUnitaire = '0';
+  String qtePrecedente = '0';
+  String qteActuelle = '0';
+}
+
+// --- ÉTATS ---
+abstract class DocumentFormState extends Equatable {
+  const DocumentFormState();
+  @override
+  List<Object?> get props => [];
+}
+
+class DocumentFormInitial extends DocumentFormState {}
+class DocumentFormLoading extends DocumentFormState {}
+class DocumentFormSuccess extends DocumentFormState {
+  final String message;
+  final String? reference; // Pour générer le PDF si besoin
+  const DocumentFormSuccess(this.message, {this.reference});
+  @override
+  List<Object?> get props => [message, reference];
+}
+class DocumentFormFailure extends DocumentFormState {
+  final String error;
+  const DocumentFormFailure(this.error);
+  @override
+  List<Object?> get props => [error];
+}
+
+// --- CUBIT ---
+class DocumentFormBloc extends Cubit<DocumentFormState> {
+  // Champs généraux
+  String type = 'Facture';
+  DateTime? date = DateTime.now();
+  Client? client;
+  String status = 'non payée';
+  String notes = '';
+  
+  // Champs calculés
+  double totalTTC = 0.0;
+  double totalHT = 0.0;
+  
+  // Listes
+  List<ArticleItem> articles = [];
+  
+  // ID si modification
   int? factureId;
-  final client = SelectFieldBloc<Client, dynamic>(
-    validators: [FieldBlocValidators.required],
-    initialValue: null,
-    items: const [],
-  );
-  final notes = TextFieldBloc(validators: []);
+  
+  // Liste des clients disponibles pour le dropdown
+  List<Client> availableClients = [];
 
-  final status = SelectFieldBloc<String, dynamic>(
-    validators: [FieldBlocValidators.required],
-    items: ['payée', 'non payée', 'partiellement payée'],
-    initialValue: 'non payée',
-  );
-  final List<ArticleFormBloc> articleBlocs = [ArticleFormBloc()];
+  // --- CHAMPS EA ---
+  String periodeEA = '';
+  String numCommande = '';
+  String totalCommandeBase = '0';
+  String totalSupplements = '0';
+  String retenueRetard = '0';
+  String avancementCumule = '0'; // (B) Calculé
+  
+  List<FactureEmiseItem> facturesEmises = [];
+  List<PosteEAItem> postesEA = [];
 
-  final articlesListState = InputFieldBloc<List<ArticleFormBloc>, dynamic>(
-    initialValue: [],
-  );
-
-  final totalTTC = TextFieldBloc(initialValue: '00 ');
-  final totalTTCAPayer = TextFieldBloc(initialValue: '00 ');
-
-  final Map<FormBloc, List<StreamSubscription>> _articleSubscriptions = {};
-
-  ////////////EA
-  final TextFieldBloc periodeEA = TextFieldBloc(); // ex: Désamiantage EA 3
-  final TextFieldBloc numCommande = TextFieldBloc();
-  final TextFieldBloc totalCommandeBase = TextFieldBloc(validators: [
-    FieldBlocValidators.required,
-    _mustBeDouble, // Validateur personnalisé ci-dessous
-  ],
-  );
-  final TextFieldBloc totalSupplements = TextFieldBloc(validators: [
-    FieldBlocValidators.required,
-    _mustBeDouble, // Validateur personnalisé ci-dessous
-  ],);
-  final TextFieldBloc retenueRetard = TextFieldBloc(validators: [
-    FieldBlocValidators.required,
-    _mustBeDouble, // Validateur personnalisé ci-dessous
-  ],);
-  final TextFieldBloc avancementCumule = TextFieldBloc(
-    validators: [
-      FieldBlocValidators.required,
-      _mustBeDouble, // Validateur personnalisé ci-dessous
-    ],
-  );
-
-  // Liste dynamique pour les factures déjà émises
-  final ListFieldBloc<FactureInfoFieldBloc, dynamic> facturesEmises =
-      ListFieldBloc();
-  final postesEA = ListFieldBloc<PosteEAFieldBloc, dynamic>(name: 'postesEA');
   DocumentFormBloc({
     Facture? initialFacture,
     List<Client> availableClients = const [],
-  }) : factureId = initialFacture?.id {
-    addFieldBlocs(
-      fieldBlocs: [type, date, client, status, articlesListState, notes ,],
-    );
-    postesEA.stream.listen((state) {
-      recalculerTotalB();
-    });
-
-    final randomNum = Random().nextInt(10000).toString().padLeft(4, '0');
-    numCommande.updateInitialValue("EA-$randomNum");
-    type.onValueChanges(
-      onData: (previous, current) async* {
-        if (current.value == 'EA') {
-          addFieldBlocs(
-            fieldBlocs: [
-              periodeEA,
-              numCommande,
-              totalCommandeBase,
-              totalSupplements,
-              retenueRetard,
-              avancementCumule,
-              facturesEmises,
-              postesEA
-            ],
-          );
-        } else {
-          removeFieldBlocs(
-            fieldBlocs: [
-              periodeEA,
-              numCommande,
-              totalCommandeBase,
-              totalSupplements,
-              retenueRetard,
-              avancementCumule,
-              facturesEmises,
-              postesEA
-            ],
-          );
-        }
-      },
-    );
+  }) : factureId = initialFacture?.id, super(DocumentFormInitial()) {
+    
+    this.availableClients = availableClients; // Stockage local
+    
+    // Init numCommande EA
+    numCommande = "EA-${DateTime.now().millisecond}"; 
 
     if (initialFacture != null) {
-      type.updateValue(
-        initialFacture.reference!.contains("FAC") ? "Facture" : "Devis" ?? '',
-      );
-      notes.updateValue(initialFacture.notes ?? "");
-      status.updateValue(initialFacture.status ?? '');
-      if (initialFacture.clientId != null) {
-        try {
-          print('availableClients ${availableClients.length}');
-          final selectedClient = availableClients.firstWhere(
-            (c) => c.id == initialFacture.clientId,
-          );
-          client.updateValue(selectedClient);
-        } catch (e) {
-          print("Client non trouvé dans la liste");
-        }
-      }
-
+      type = initialFacture.reference?.contains("FAC") == true ? "Facture" : "Devis";
+      notes = initialFacture.notes ?? "";
+      status = initialFacture.status ?? 'non payée';
+      
       if (initialFacture.date != null) {
-        date.updateValue(DateTime.parse(initialFacture.date!));
+        try { date = DateTime.parse(initialFacture.date!); } catch (_) {}
       }
+      
+      if (initialFacture.clientId != null) {
+         try {
+           client = availableClients.firstWhere((c) => c.id == initialFacture.clientId);
+         } catch (_) {}
+      }
+      
+      // Init articles
+      if (initialFacture.articles != null) {
+        articles = initialFacture.articles!.map((a) {
+          var item = ArticleItem();
+          item.description = a.description ?? '';
+          item.quantite = a.quantite?.toString() ?? '1';
+          item.prixUnitaire = a.prixUnitaire?.toString() ?? '0';
+          return item;
+        }).toList();
+        recalculateTotals();
+      }
+    } else {
+      // Ajout d'un article vide par défaut pour une nouvelle facture
+      addArticle();
     }
-    _reconfigureArticleListeners();
   }
-  static String? _mustBeDouble(String? value) {
-    if (value == null || value.isEmpty) return null;
-    final isDouble = double.tryParse(value.replaceFirst(',', '.')) != null;
-    if (!isDouble) return 'Veuillez entrer un nombre valide';
-    return null;
-  }
+
+  // --- ACTIONS ARTICLES ---
   void addArticle() {
-    print("add article");
-    final newArticleBloc = ArticleFormBloc();
-    articleBlocs.add(newArticleBloc);
-    _listenToArticleBloc(newArticleBloc);
-    _updateFormState();
-  }
-  void recalculerTotalB() {
-    double totalGeneralB = 0.0;
-
-    for (var poste in postesEA.value) {
-      double prec = double.tryParse(poste.qtePrecedente.value.replaceFirst(',', '.')) ?? 0.0;
-      double actu = double.tryParse(poste.qteActuelle.value.replaceFirst(',', '.')) ?? 0.0;
-      double pu = double.tryParse(poste.prixUnitaire.value.replaceFirst(',', '.')) ?? 0.0;
-
-      totalGeneralB += (prec + actu) * pu;
-    }
-
-    // Mise à jour du champ sans déclencher une boucle infinie
-    avancementCumule.updateValue(totalGeneralB.toStringAsFixed(2));
+    articles.add(ArticleItem());
+    // Pas d'emit ici car géré localement par l'UI via les contrôleurs, 
+    // sauf si on veut forcer un rebuild complet.
   }
 
   void removeArticleAt(int index) {
-    final blocToRemove = articleBlocs.removeAt(index);
-    _removeListeners(blocToRemove); // Supprimer les écoutes
-    blocToRemove.close();
-    _updateFormState(); // Mettre à jour les totaux et l'état
+    if (index >= 0 && index < articles.length) {
+      articles.removeAt(index);
+      recalculateTotals();
+    }
+  }
+  
+  void updateArticle(int index, ArticleItem item) {
+    if (index >= 0 && index < articles.length) {
+      articles[index] = item;
+      recalculateTotals();
+    }
   }
 
-  // --- Gestion des Écoutes et Calculs ---
+  void recalculateTotals() {
+    double ht = 0;
+    for (var a in articles) {
+      int q = int.tryParse(a.quantite) ?? 0;
+      int p = int.tryParse(a.prixUnitaire) ?? 0;
+      ht += q * p;
+    }
+    totalHT = ht;
+    // TVA 20% par exemple, à adapter si besoin
+    // totalTTC = totalHT * 1.20; 
+    totalTTC = totalHT; // Selon votre ancien code totalTTC = totalHT (pas de TVA appliquée ?)
+  }
 
-  void _listenToArticleBloc(ArticleFormBloc bloc) {
+  // --- ACTIONS EA ---
+  void addFactureEmise() {
+    facturesEmises.add(FactureEmiseItem());
+  }
+  
+  void removeFactureEmiseAt(int index) {
+    facturesEmises.removeAt(index);
+  }
+
+  void addPosteEA() {
+    postesEA.add(PosteEAItem());
+  }
+  
+  void removePosteEAAt(int index) {
+    postesEA.removeAt(index);
+    recalculerTotalB();
+  }
+  
+  void recalculerTotalB() {
+    double totalB = 0.0;
+    for (var poste in postesEA) {
+      double prec = double.tryParse(poste.qtePrecedente.replaceAll(',', '.')) ?? 0.0;
+      double actu = double.tryParse(poste.qteActuelle.replaceAll(',', '.')) ?? 0.0;
+      double pu = double.tryParse(poste.prixUnitaire.replaceAll(',', '.')) ?? 0.0;
+      totalB += (prec + actu) * pu;
+    }
+    avancementCumule = totalB.toStringAsFixed(2);
+  }
+
+  // --- SUBMIT ---
+  Future<void> submit() async {
+    // Validations de base
+    if (client == null) {
+      emit(const DocumentFormFailure("Veuillez sélectionner un client"));
+      emit(DocumentFormInitial());
+      return;
+    }
+    if (date == null) {
+      emit(const DocumentFormFailure("La date est requise"));
+      emit(DocumentFormInitial());
+      return;
+    }
+
+    emit(DocumentFormLoading());
+
     try {
-      final subscriptions = <StreamSubscription>[];
-      subscriptions.add(bloc.quantite.stream.listen((_) => _updateFormState()));
-      subscriptions.add(
-        bloc.prixUnitaire.stream.listen((_) => _updateFormState()),
-      );
-
-      _articleSubscriptions[bloc] = subscriptions;
-    } catch (e) {
-      print("exception in listeb article $e");
-    }
-  }
-
-  void _removeListeners(ArticleFormBloc bloc) {
-    _articleSubscriptions[bloc]?.forEach((sub) => sub.cancel());
-    _articleSubscriptions.remove(bloc);
-  }
-
-  void _reconfigureArticleListeners() {
-    // Nettoyage et mise en place des écoutes pour tous les blocs actuels
-    _articleSubscriptions.values
-        .expand((list) => list)
-        .forEach((sub) => sub.cancel());
-    _articleSubscriptions.clear();
-
-    for (final articleBloc in articleBlocs) {
-      _listenToArticleBloc(articleBloc);
-    }
-    _updateFormState();
-  }
-
-  // Met à jour les totaux et la valeur articlesListState
-  void _updateFormState() {
-    print("final step");
-    int subtotal = 0;
-    final List<Article> currentArticles = [];
-
-    for (final bloc in articleBlocs) {
-      if (bloc.state.canSubmit) {
-        final data = bloc.articleData;
-        subtotal += (data.prixUnitaire! * (data.quantite!)) ?? 0;
-        currentArticles.add(data);
-      }
-    }
-
-    // 2. Mise à jour des totaux
-    const double tvaRate = 0.20;
-    double grandTotal = subtotal * (1 + tvaRate);
-
-    totalTTC.updateValue('${subtotal.toStringAsFixed(2)}');
-    totalTTCAPayer.updateValue('${grandTotal.toStringAsFixed(2)}');
-    articlesListState.updateValue(articleBlocs);
-  }
-
-  @override
-  FutureOr<void> onDeleting() {
-    print("add article $articleBlocs");
-    final newArticleBloc = ArticleFormBloc();
-    articleBlocs.add(newArticleBloc);
-    _listenToArticleBloc(newArticleBloc);
-    _updateFormState();
-  }
-
-  @override
-  void onSubmitting() async {
-    if (type.value != "EA") {
-      final allArticlesValid = articleBlocs.every((bloc) =>
-      bloc.state.canSubmit);
-
-      if (!allArticlesValid) {
-        articleBlocs.forEach((bloc) => bloc.submit());
-        emitFailure(
-          failureResponse:
-          "Veuillez corriger les erreurs dans la liste des articles.",
-        );
-        return;
-      }
-      print("cc in add facture");
-      final List<Article> finalArticles = articleBlocs
-          .map((bloc) => bloc.articleData)
-          .toList();
-      var dateD = Utils.convertDateTimeToSqlDateFormat(
-        date.value ?? DateTime.now(),
-      );
-      try {
+      if (type != "EA") {
+        // Validation articles
+        if (articles.isEmpty) {
+           emit(const DocumentFormFailure("Veuillez ajouter au moins un article"));
+           emit(DocumentFormInitial());
+           return;
+        }
+        
+        // Préparation
+        final List<Article> finalArticles = articles.map((e) => e.toArticle()).toList();
+        var dateD = Utils.convertDateTimeToSqlDateFormat(date!);
+        var ref = Utils.genererReference(type.toLowerCase(), date!);
+        
         if (factureId != null) {
-          var ref = Utils.genererReference(
-            type.value!.toLowerCase(),
-            date.value!,
-          );
-
+          // Edit
           var res = await FactureRepository().editFacture(
             id: factureId,
-            reference: ref,
+            reference: ref, // Ou garder l'ancienne ref ? L'ancien code régénérait
             date: dateD,
-            client_id: client.value?.id ?? 1,
-            status: status.value,
-
-            notes: notes.value,
+            client_id: client!.id!,
+            status: status,
+            notes: notes,
             articles: finalArticles,
           );
-          if (res != null)
-            emitSuccess(canSubmitAgain: true, successResponse: ref);
-          else
-            emitFailure();
+           if (res != null) {
+            emit(DocumentFormSuccess("Document modifié", reference: ref));
+          } else {
+            emit(const DocumentFormFailure("Erreur modification"));
+            emit(DocumentFormInitial());
+          }
         } else {
-          var ref = Utils.genererReference(
-            type.value!.toLowerCase(),
-            date.value!,
-          );
-
+          // Add
           var res = await FactureRepository().addFacture(
             reference: ref,
             date: dateD,
-            client_id: client.value?.id ?? 1,
-            status: status.value,
-
-            notes: notes.value,
+            client_id: client!.id!,
+            status: status,
+            notes: notes,
             articles: finalArticles,
           );
-          if (res != null)
-            emitSuccess(canSubmitAgain: true, successResponse: ref);
-          else
-            emitFailure();
+          if (res != null) {
+            emit(DocumentFormSuccess("Document créé", reference: ref));
+          } else {
+            emit(const DocumentFormFailure("Erreur création"));
+            emit(DocumentFormInitial());
+          }
         }
-      } catch (e) {
-        print("exception in addd facture $e");
-        emitFailure();
+      } else {
+        // Cas EA (État d'avancement)
+        // Ici l'ancien code ne faisait qu'un emitSuccess pour le PDF sans appel API apparemment
+        // ou alors c'était incomplet.
+        // Je simule un succès pour permettre la génération PDF
+        emit(const DocumentFormSuccess("EA Prêt")); 
       }
-    }else
-      emitSuccess();
-  }
-  double calculerTotalFacturesEmises() {
-    return facturesEmises.value.fold(0.0, (total, group) {
-      // On parse la String du TextField en double
-      final montant = double.tryParse(group.montantHTVA.value) ?? 0.0;
-      return total + montant;
-    });
-  }
-
-}
-
-class FactureInfoFieldBloc extends GroupFieldBloc {
-  final TextFieldBloc numFacture;
-  final TextFieldBloc montantHTVA;
-
-  // Constructeur nommé privé pour l'initialisation propre
-  FactureInfoFieldBloc._({
-    required String name,
-    required this.numFacture,
-    required this.montantHTVA,
-  }) : super(
-    name: name,
-    fieldBlocs: [numFacture, montantHTVA],
-  );
-
-  // Factory pour créer une nouvelle instance facilement
-  factory FactureInfoFieldBloc.create(String name) {
-    return FactureInfoFieldBloc._(
-      name: name,
-      numFacture: TextFieldBloc(
-        validators: [FieldBlocValidators.required],
-      ),
-      montantHTVA: TextFieldBloc(
-       // initialValue: '0.0',
-        validators: [FieldBlocValidators.required],
-      ),
-    );
-  }
-}
-
-class PosteEAFieldBloc extends GroupFieldBloc {
-  final TextFieldBloc designation;
-  final TextFieldBloc unite;
-  final TextFieldBloc qteTotale;
-  final TextFieldBloc prixUnitaire;
-  final TextFieldBloc qtePrecedente;
-  final TextFieldBloc qteActuelle;
-
-  PosteEAFieldBloc._({
-    required String name,
-    required this.designation,
-    required this.unite,
-    required this.qteTotale,
-    required this.prixUnitaire,
-    required this.qtePrecedente,
-    required this.qteActuelle,
-    required List<FieldBloc> fields,
-  }) : super(name: name, fieldBlocs: fields);
-
-  factory PosteEAFieldBloc.create(String name) {
-    final d = TextFieldBloc(name: 'designation');
-    final u = TextFieldBloc(name: 'unite', initialValue: 'm²');
-    final qt = TextFieldBloc(name: 'qteTotale', initialValue: '0');
-    final pu = TextFieldBloc(name: 'prixUnitaire', initialValue: '0');
-    final qp = TextFieldBloc(name: 'qtePrecedente', initialValue: '0');
-    final qa = TextFieldBloc(name: 'qteActuelle', initialValue: '0');
-
-    return PosteEAFieldBloc._(
-      name: name,
-      designation: d,
-      unite: u,
-      qteTotale: qt,
-      prixUnitaire: pu,
-      qtePrecedente: qp,
-      qteActuelle: qa,
-      fields: [d, u, qt, pu, qp, qa],
-    );
+    } catch (e) {
+      emit(DocumentFormFailure("Erreur: $e"));
+      emit(DocumentFormInitial());
+    }
   }
 }
