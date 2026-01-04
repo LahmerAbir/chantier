@@ -171,25 +171,54 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
+InputDecoration _inputDecoration({
+  required String hintText,
+  Widget? suffixIcon,
+}) {
+  return InputDecoration(
+    hintText: hintText,
+    suffixIcon: suffixIcon,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    filled: true,
+    fillColor: Colors.grey.shade50,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: Colors.blue.shade700, width: 1.5),
+    ),
+  );
+}
 
 Widget _form(BuildContext context, LoginFormBloc loginFormBloc) {
 
 
   return Column(
       children: [
-        TextFormControl(
+        TextFieldBlocBuilder(
+          textFieldBloc: loginFormBloc.username,
+          decoration: _inputDecoration(hintText: "Email"),
+          suffixButton: SuffixButton.asyncValidating,
+
+        ),
+      /*  TextFormControl(
           textFieldBloc: loginFormBloc.username,
           suffixButton: SuffixButton.asyncValidating,
           keyboardType: TextInputType.emailAddress,
           label: "Email",
 
-        ),
-        TextFormControl(
+        ),*/
+        TextFieldBlocBuilder(
           textFieldBloc: loginFormBloc.password,
+          decoration: _inputDecoration(hintText: "Mot de passe" ,
+          ),
           suffixButton: SuffixButton.obscureText,
-          label: "Mot de passe",
+          obscureText: true,
+
         ),
+
         GestureDetector(
           onTap: () {
             loginFormBloc.stayConnect.updateValue(
