@@ -24,32 +24,35 @@ final router = AppRouter().delegate(
   navigatorObservers: () => [AppRouterObserver()],
 );
 Future<void> main() async {
-  tz.initializeTimeZones();
-
   WidgetsFlutterBinding.ensureInitialized();
-  await runZonedGuarded(() async {
 
-    WidgetsFlutterBinding.ensureInitialized();
-    Bloc.observer = AppBlocObserver();
-    SystemChrome.setPreferredOrientations([
+  await runZonedGuarded(() async {
+    // Init timezone APRÈS Flutter
+    tz.initializeTimeZones();
+
+    await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
     final authRepository = AuthRepository();
     await Utils.getToken();
-  //  await initializeDateFormatting('fr', null);
 
-    runApp(ProviderScope(
-      overrides: [
-        configureRepositoryLocalStorage(),
-      ],
-      child:
-      BatiProApp(
-          authRepository: authRepository
+    Bloc.observer = AppBlocObserver();
+
+    runApp(
+      ProviderScope(
+        overrides: [
+          configureRepositoryLocalStorage(),
+        ],
+        child: BatiProApp(authRepository: authRepository),
       ),
-
-    ));
-  }, (error, st) => print(error));
+    );
+  }, (error, stack) {
+    // En Release iOS, print ne sert à rien
+    // mais on évite le crash silencieux
+    debugPrint('ZONE ERROR: $error');
+  });
 }
 
 class BatiProApp extends ConsumerWidget {

@@ -57,5 +57,18 @@
     <key>io.flutter.embedded_views_preview</key>
     <true/>
 
+
+
+    <key>NSCameraUsageDescription</key>
+    <string>Camera access</string>
+
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Photo access</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Microphone access</string>
+
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Location access</string>
 </dict>
 </plist>
