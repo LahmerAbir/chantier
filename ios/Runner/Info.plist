@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
+    <!-- Désactivation de Impeller pour éviter les crashs en Release -->
+    <key>FLTEnableImpeller</key>
+    <false/>
+
 	<!-- Permissions requises -->
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Access required to export documents</string>
@@ -57,13 +61,10 @@
     <key>io.flutter.embedded_views_preview</key>
     <true/>
 
-
-
     <key>NSCameraUsageDescription</key>
     <string>Camera access</string>
 
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Photo access</string>
+    <!-- Doublon supprimé ici (NSPhotoLibraryUsageDescription était présent deux fois) -->
 
     <key>NSMicrophoneUsageDescription</key>
     <string>Microphone access</string>
